@@ -27,7 +27,7 @@ window.onload = ()=>{
       const nickName = clickedEl.innerText;
       dmName = nickName;
       console.log(nickName);
-      document.getElementById('dm_messages').style.display = 'block';
+      document.getElementById('dm_chat').style.display = 'block';
       document.getElementById('dm_nickname').innerHTML = '<b>'+dmName+'</b>';
     }
   });

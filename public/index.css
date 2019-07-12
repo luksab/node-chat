@@ -11,12 +11,14 @@ h1 {
 }
 
 #chat,
+#dm_chat,
 #nickname,
+#dm_nickname,
 #messages {
   width: 600px;  
   text-align: left;
 }
-#chat {
+#chat, #dm_chat {
   position: relative;
   margin: auto;
   border: 1px solid #ddd;
@@ -29,6 +31,7 @@ h1 {
 }
 
 #nickname,
+#dm_nickname,
 #connecting {
   position: absolute;
   height: 410px;
@@ -42,10 +45,11 @@ h1 {
   display: block;
 }
 #nickname .wrap,
+#dm_nickname .wrap,
 #connecting .wrap {
   padding-top: 30px;
 }
-#nickname input {
+#nickname input , #dm_nickname input{
   border: 1px solid #ccc;
   padding: 10px;
   width: 300px;
@@ -67,7 +71,7 @@ label {
   font-size: 18px;
 }
 
-#nickname input:focus {
+#nickname input:focus , #dm_nickname input:focus{
   border-color: #999;
   outline: 0;
 }
@@ -121,7 +125,7 @@ label {
   border-radius: 5px;
   text-shadow: 0 1px 0 rgba(0, 0, 0, .2);
 }
-#messages #lines {
+#messages #lines ,#messages #dm_lines{
   height: 250px;
   border-top: 1px solid #ddd;
   background: #fff;
@@ -155,15 +159,15 @@ label {
   background-color: #fff;
   -webkit-border-radius: 3px;
 }
-#send-message {
+#send-message, #dm_send-message{
   position: relative;
 }
 
-#send-message>div {
+#send-message>div, #dm_send-message>div {
   text-align: center;
 }
 
-#send-message input {
+#send-message input, #dm_send-message input{
   border: none;
   height: 40px;
   position: relative;
@@ -179,11 +183,11 @@ label {
   width: 580px;
   z-index: 100;
 }
-#send-message input:focus {
+#send-message input:focus, #dm_send-message input:focus{
   outline: 0;
 }
 
-#send-message button{
+#send-message button, #dm_send-message button{
   line-height: 22px;
   margin: 20px 0;
   position: relative;
