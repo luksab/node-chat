@@ -1,10 +1,7 @@
+window.onload = ()=>{
+  lines = document.getElementById('lines');
 
-  //
-  // socket.io code
-  //
   const socket = io.connect();
-  window.onload = ()=>lines = document.getElementById('lines');
-
   socket.on('connect', function () {
     $('#chat').addClass('connected');
   });
@@ -122,6 +119,8 @@
     });
   });
 
+
+};
   
   
   
