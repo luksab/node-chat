@@ -1,5 +1,6 @@
 window.onload = ()=>{
-  lines = document.getElementById('lines');
+  let lines = document.getElementById('lines');
+  let dmName;
 
   const socket = io.connect();
   socket.on('connect', function () {
@@ -24,7 +25,10 @@ window.onload = ()=>{
     const clickedEl = ev.target;
     if(clickedEl.tagName == 'B') {
       const nickName = clickedEl.innerText;
+      dmName = nickName;
       console.log(nickName);
+      document.getElementById('dm_messages').style.display = 'block';
+      document.getElementById('dm_nickname').innerHTML = '<b>'+dmName+'</b>';
     }
   });
 
