@@ -19,7 +19,15 @@
     $('#nicknames').empty().append($('<span>Online: </span>'));
     //var nicknames = document.getElementsByClassName("nicknames");
     for (var i in nicknames) {
-      $('#nicknames').append($('<b onclick="dm(this.innerHTML)">').text(nicknames[i]));
+      $('#nicknames').append($('<b>').text(nicknames[i]));
+    }
+  });
+  
+  document.getElementById('nicknames').addEventListener('click', (ev) =>  {
+    const clickedEl = ev.target;
+    if(clickedEl.tagName == 'B') {
+      const nickName = clickedEl.innerText;
+      console.log(nickName);
     }
   });
 
