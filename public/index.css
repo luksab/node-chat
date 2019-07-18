@@ -125,7 +125,7 @@ label {
   border-radius: 5px;
   text-shadow: 0 1px 0 rgba(0, 0, 0, .2);
 }
-#messages #lines ,#messages #dm_lines{
+#messages #lines ,#dm_lines{
   height: 250px;
   border-top: 1px solid #ddd;
   background: #fff;
@@ -233,7 +233,7 @@ div.filebutton {
   width: 150px !important;
 }
 
-.filebutton input#imagefile {
+.filebutton input#imagefile, input#dm_imagefile {
   position: absolute;
   top: 0;
   left: 0;

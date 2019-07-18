@@ -1,5 +1,6 @@
 window.onload = ()=>{
   let lines = document.getElementById('lines');
+  let dm_lines=document.getElementById('dm_lines');
   let dmName;
 
   const socket = io.connect();
@@ -28,9 +29,24 @@ window.onload = ()=>{
       dmName = nickName;
       console.log(nickName);
       document.getElementById('dm_chat').style.display = 'block';
-      document.getElementById('dm_nickname').innerHTML = '<b>'+dmName+'</b>';
+      document.getElementById('dm_nickname').innerHTML = '<b onclick="document.getElementById(`dm_chat`).style.display = `none`;">'+dmName+'</b>';
     }
   });
+  
+  $('#dm_send-message').submit(function (ev) {
+      ev.preventDefault();
+      dm('me', $('#dm_message').val());
+      console.log('dm',dmName , $('#dm_message').val());
+      socket.emit('dm',{user: dmName , msg:$('#dm_message').val()});
+      $('#dm_message').val('').focus();
+      $('#dm_lines').get(0).scrollTop = Number.MAX_SAFE_INTEGER;
+      return false;
+  });
+  
+  function dm (from, msg) {
+    dm_lines.innerHTML += '<p><b>' + from + '</b>' + msg + '</p>';
+    setTimeout(()=>dm_lines.scrollTop = Number.MAX_SAFE_INTEGER);
+  }
 
   socket.on('user message', message);
   socket.on('user image', image);
@@ -59,10 +75,6 @@ window.onload = ()=>{
     let w = (lines.clientWidth|0)-20;
     lines.innerHTML += '<p><b>' + from + '</b>' + '<img src="' + base64Image + '" width="'+ w +'"/>' + '</p>';
     setTimeout(()=>lines.scrollTop = Number.MAX_SAFE_INTEGER);
-  }
-  
-  function dm (nick){
-      console.log("starting dm to"+nick);
   }
 
   //
