@@ -4,19 +4,9 @@ const fs = require('fs'),
  static = require('node-static'),
  sanitizeHtml = require('sanitize-html'),
  crypto = require('crypto');
- 
-const options = {
-  key: fs.readFileSync('/etc/letsencrypt/live/luksab.ml/privkey.pem'),
-  cert: fs.readFileSync('/etc/letsencrypt/live/luksab.ml/cert.pem')
-};
-
-require('http').createServer((req,res)=>{
-    res.writeHead(301, {"Location": 'https://' + req.headers['host'] + req.url});
-    res.end();}
-  ).listen(80);
 
 const file = new static.Server(path.join(__dirname, '..', 'public'));
-const app = require('https').createServer(options, (req,res)=>file.serve(req, res)).listen(443);
+const app = require('http').createServer((req,res)=>file.serve(req, res)).listen(8080);
 
 var io = sio.listen(app,{pingTimeout: 5000}),
   nicknames = {},

@@ -24,12 +24,11 @@ window.onload = ()=>{
   
   document.getElementById('nicknames').addEventListener('click', (ev) =>  {
     const clickedEl = ev.target;
-    if(clickedEl.tagName == 'B') {
+    if(clickedEl.tagName == 'B' && clickedEl.innerText !== socket.nickname) {
       const nickName = clickedEl.innerText;
       dmName = nickName;
-      console.log(nickName);
       document.getElementById('dm_chat').style.display = 'block';
-      document.getElementById('dm_nickname').innerHTML = '<b onclick="document.getElementById(`dm_chat`).style.display = `none`;">'+dmName+'</b>';
+      document.getElementById('dm_nickname').innerHTML = '<b onclick="document.getElementById(\'dm_chat\').style.display = \'none\';">'+dmName+'</b>';
     }
   });
   
