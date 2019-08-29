@@ -1,0 +1,64 @@
+<html lang="en">
+<head>
+    <title>Cool chat</title>
+    <meta name="Description" content="A very cool chat.">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon16.png" />
+    <link rel="stylesheet" href="/indexNew.css" media="none" onload="if(media!='all')media='all'">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" async></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js' async></script>
+    <script src='/index.js' async></script>
+  </head>
+<body>
+	<table width=98% height=98% align=center>
+		<tr><td align=center colspan=3>
+			Cool Chat
+		</td></tr>
+		<tr>
+			<td width=15% height=90% align=center>
+            <div id="contacts">
+                <div id="contactSearch">
+                <input type="text" dir="auto" title="Suchen oder neuen Chat beginnen" value="">
+                </div>
+                <div id="nicknames"></div>
+            </div>
+			</td>
+			<td width=70% align=center id="chat">
+                <div id="nickname">
+                    <form class="wrap" id="set-nickname">
+                    <label for="nick">Please type in your nickname and press enter.</label>
+                    <input id="nick" name="nick" type="text" placeholder="nickname" autocomplete="off"/>
+                    <input id="passwd" aria-label="password" type="password" placeholder="password (optional)" autocomplete="new-password"/>
+                    <input type="submit" value="Register" margin = "10px">
+                    <p id="nickname-err">Wrong password or nick unavailable</p>
+                    </form>
+                </div>
+                <div id="connecting">
+                    <div class="wrap">Connecting to server...</div>
+                </div>
+                <div id="messages">
+                    <div id="lines"></div>
+                </div>
+                <form id="send-message">
+                    <input id="message" type="text" autocomplete="off" disabled aria-label="message"/>
+                    <div>
+                    <button value="" class="send" disabled>Send</button>
+                    <div class="filebutton">Send Image<input type="file" id="imagefile" accept="image/*" disabled aria-label="send image"></div>
+                    <button class="js-push-btn">
+                        Enable Push Messaging
+                        </button>
+                    </div>
+                </form>
+                </div>
+			</td>
+		</tr>
+		<tr><td align=center colspan=3 height=5%>
+			<a href="/static/datenschutz.html">Datenschutzerklärung</a>
+            &nbsp;
+            <a href="/static/impressum.html">Impressum</a>
+		</td></tr>
+	</table>
+</body>
+</html>
