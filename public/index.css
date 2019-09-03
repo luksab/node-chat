@@ -5,6 +5,7 @@ body {
 
 .sidenav {
   height: 100vh;
+  max-width: 100vw;
   width: 0;
   position: fixed;
   z-index: 1;
@@ -35,6 +36,15 @@ body {
   right: 0.2em;
   font-size: 2.2em;
   margin-left: 50px;
+}
+
+.settbtn{
+  position: absolute;
+  top: 0;
+  left: 0.2em;
+  font-size: 2.2em !important;
+  padding: 0.4em !important;
+  width: 7em;
 }
 
 .pushPushButton{
@@ -77,8 +87,16 @@ h1 {
   text-shadow: 0 1px 1px #fff;
 }
 
-#messages{
-    height:85vh
+header {
+  max-height: 5vh;
+}
+
+#messages {
+    height:90%
+}
+
+#chat {
+  height: 90vh
 }
 
 #chat,
@@ -118,12 +136,12 @@ h1 {
 #connecting .wrap {
   padding-top: 30px;
 }
-#nickname input , #dm_nickname input{
+#nickname input{
   border: 1px solid #ccc;
   padding: 10px;
   width: 50%;
   font-size: 14px;
-  color: #777;
+  color: rgb(46, 46, 46);
   border-radius: 5px;
   -moz-border-radius: 5px;
   -webkit-border-radius: 5px;
@@ -221,8 +239,9 @@ label {
   overflow-y: auto;
 }
 
-#send-message, #dm_send-message{
+#send-message{
   position: relative;
+  max-height: 10%;
 }
 
 #send-message>div, #dm_send-message>div {
@@ -296,7 +315,7 @@ div.filebutton {
   position: relative;
 }
 
-.filebutton input#imagefile, input#dm_imagefile {
+.filebutton input#imagefile {
   position: absolute;
   top: 0;
   left: 0;

@@ -17,66 +17,66 @@ if(window.matchMedia('(min-width: 800px)').matches){
 };
 
 window.onload = ()=>{    
-// Created by STRd6
-// MIT License
-// jquery.paste_image_reader.js
-(function($) {
-	var defaults;
-	$.event.fix = (function(originalFix) {
-		return function(event) {
-			event = originalFix.apply(this, arguments);
-			if (event.type.indexOf("copy") === 0 || event.type.indexOf("paste") === 0) {
-				event.clipboardData = event.originalEvent.clipboardData;
-			}
-			return event;
-		};
-	})($.event.fix);
-	defaults = {
-		callback: $.noop,
-		matchType: /image.*/
-	};
-	return ($.fn.pasteImageReader = function(options) {
-		if (typeof options === "function") {
-			options = {
-				callback: options
-			};
-		}
-		options = $.extend({}, defaults, options);
-		return this.each(function() {
-			var $this, element;
-			element = this;
-			$this = $(this);
-			return $this.bind("paste", function(event) {
-				var clipboardData, found;
-				found = false;
-				clipboardData = event.clipboardData;
-				return Array.prototype.forEach.call(clipboardData.types, function(type, i) {
-					var file, reader;
-					if (found) {
-						return;
-					}
-					if (
-						type.match(options.matchType) ||
-						clipboardData.items[i].type.match(options.matchType)
-					) {
-						file = clipboardData.items[i].getAsFile();
-						reader = new FileReader();
-						reader.onload = function(evt) {
-							return options.callback.call(element, {
-								dataURL: evt.target.result,
-								event: evt,
-								file: file,
-								name: file.name
-							});
-						};
-						reader.readAsDataURL(file);
-						return (found = true);
-					}
-				});
-			});
-		});
-	});
-})(jQuery);
+  // Created by STRd6
+  // MIT License
+  // jquery.paste_image_reader.js
+  (function($) {
+    var defaults;
+    $.event.fix = (function(originalFix) {
+      return function(event) {
+        event = originalFix.apply(this, arguments);
+        if (event.type.indexOf("copy") === 0 || event.type.indexOf("paste") === 0) {
+          event.clipboardData = event.originalEvent.clipboardData;
+        }
+        return event;
+      };
+    })($.event.fix);
+    defaults = {
+      callback: $.noop,
+      matchType: /image.*/
+    };
+    return ($.fn.pasteImageReader = function(options) {
+      if (typeof options === "function") {
+        options = {
+          callback: options
+        };
+      }
+      options = $.extend({}, defaults, options);
+      return this.each(function() {
+        var $this, element;
+        element = this;
+        $this = $(this);
+        return $this.bind("paste", function(event) {
+          var clipboardData, found;
+          found = false;
+          clipboardData = event.clipboardData;
+          return Array.prototype.forEach.call(clipboardData.types, function(type, i) {
+            var file, reader;
+            if (found) {
+              return;
+            }
+            if (
+              type.match(options.matchType) ||
+              clipboardData.items[i].type.match(options.matchType)
+            ) {
+              file = clipboardData.items[i].getAsFile();
+              reader = new FileReader();
+              reader.onload = function(evt) {
+                return options.callback.call(element, {
+                  dataURL: evt.target.result,
+                  event: evt,
+                  file: file,
+                  name: file.name
+                });
+              };
+              reader.readAsDataURL(file);
+              return (found = true);
+            }
+          });
+        });
+      });
+    });
+  })(jQuery);
     
 
   // In the following line, you should include the prefixes of implementations you want to test.
@@ -148,7 +148,7 @@ window.onload = ()=>{
   let isSubscribed = false;
   let swRegistration = null;
   const applicationServerPublicKey = 'BM_12EMi2xCAVhD2tn_gr3DugdW_bYnxtVCJd1qzAZTag5gi-IH97Vetc5sYfr155JiPGceLMVMXy29GmFCES20';
-  const pushButton = document.querySelector('.pushPushButton');
+  const pushButton = document.querySelector('.settbtn');
 
   if ('serviceWorker' in navigator && 'PushManager' in window) {
   
@@ -327,6 +327,7 @@ window.onload = ()=>{
       cycleNavBar()
       const nickName = clickedEl.innerText;
       dmName = nickName;
+      socket.emit("getKey",dmName);
       document.getElementsByTagName('span')[1].innerText = "☰ "+((dmName==="allChat")?"Cool Chat":dmName);
       lines.innerHTML = '';
       if(dmName === "allChat")
@@ -343,7 +344,8 @@ window.onload = ()=>{
       var trans = db.transaction(["messages"], 'readwrite');
       var objectStore = trans.objectStore("messages");
       var index = objectStore.index("chat");
-      index.openCursor().onsuccess = (e)=>{
+      var cursor=index.openCursor()
+      cursor.onsuccess = (event)=>{
         var cursor = event.target.result;
         if(cursor){
           if(chat === cursor.value.chat){
@@ -351,8 +353,8 @@ window.onload = ()=>{
           }
           cursor.continue();
         }
-          
       }
+      cursor.onerror = (e)=>console.log(e);
       return true;
     }
     catch(e){console.log(e);return false;}
@@ -381,7 +383,8 @@ window.onload = ()=>{
     lines.innerHTML += '<p><b>' + from + '</b>' + msg + '</p>';
     setTimeout(()=>lines.scrollTop = lines.scrollHeight);
   }
-//Todo: dm Pics, delete message typing, fix AllChat inreliablity
+
+  //Todo: dm Pics, delete message typing, fix AllChat inreliablity
   socket.on('user message', (from,msg)=>AllChat(from,msg));
   socket.on('user image', image);
   socket.on("dm",(msg)=>{
@@ -450,27 +453,25 @@ window.onload = ()=>{
   }
   
   
-    contactsSearch.onchange = contactsSearch.onkeyup = contactsSearch.onclick = ()=>{
-        
-        if(contactsSearch.value != ""){
-            nicks = fuzzysort.go(contactsSearch.value,Object.values(nicknames),{threshold: -999});
-            console.log(nicks)
-            $('#nicknames').empty().append($('<span>Online: </span>'));
-            $('#nicknames').append($('<b>').text("allChat"));
-            //var nicknames = document.getElementsByClassName("nicknames");
-            for (var i in nicks) {
-                $('#nicknames').append($('<b>').text(nicks[i].target));
-            }
-            return;
-        }
+  contactsSearch.onchange = contactsSearch.onkeyup = contactsSearch.onclick = ()=>{
+    if(contactsSearch.value != ""){
+        nicks = fuzzysort.go(contactsSearch.value,Object.values(nicknames),{threshold: -999});
+        console.log(nicks)
         $('#nicknames').empty().append($('<span>Online: </span>'));
         $('#nicknames').append($('<b>').text("allChat"));
         //var nicknames = document.getElementsByClassName("nicknames");
-        for (var i in nicknames) {
-            $('#nicknames').append($('<b>').text(nicknames[i]));
+        for (var i in nicks) {
+            $('#nicknames').append($('<b>').text(nicks[i].target));
         }
-        
-    };
+        return;
+    }
+    $('#nicknames').empty().append($('<span>Online: </span>'));
+    $('#nicknames').append($('<b>').text("allChat"));
+    //var nicknames = document.getElementsByClassName("nicknames");
+    for (var i in nicknames) {
+        $('#nicknames').append($('<b>').text(nicknames[i]));
+    }
+  };
   //
   // dom manipulation code
   //
@@ -489,15 +490,28 @@ window.onload = ()=>{
       return false;
     }
 
-    $('#send-message').submit(function () {
+    $('#send-message').submit(function (e) {
+      e.preventDefault();
       if(dmName){
+        if(publicKeys[dmName])
+          encryptData(publicKeys[dmName].encrypt, $('#message').val()).then((encyptedData)=>{
+            signData(signKey, encyptedData).then((SignedTest)=>{
+              dm('me', $('#message').val());
+              console.log("sending Encrypted MSG");
+              socket.emit("encryptedDM",{user:dmName,msg:encyptedData,signature:SignedTest});
+              $('#message').val('').focus();
+              $('#lines').get(0).scrollTop = Number.MAX_SAFE_INTEGER;
+            })
+          })
+        else{
           dm('me', $('#message').val());
           socket.emit('dm',{user: dmName , msg:$('#message').val()});
-          $('#message').val('').focus()
+          $('#message').val('').focus();
           $('#lines').get(0).scrollTop = Number.MAX_SAFE_INTEGER;
-          return false;
+        }
+        return false;
       }
-      
+      alert("No dm")
       message('me', $('#message').val());
       socket.emit('user message', $('#message').val());
       $('#message').val('').focus();
@@ -672,128 +686,258 @@ window.onload = ()=>{
         
         
     //Encryption shit
-    /*
-    encode message in a form we can use for the encrypt operation.
-    */
-    function getMessageEncoding(message) {
-        let enc = new TextEncoder();
-        return enc.encode(message);
+    function generateKey(alg, scope) {
+      return new Promise(function(resolve) {
+        var genkey = crypto.subtle.generateKey(alg, true, scope)
+        genkey.then(function (pair) {
+          resolve(pair)
+        }).catch((e)=>console.log(e.message))
+      })
     }
 
-    async function encrypt(secretKey) {
-        const ciphertextValue = document.querySelector(".ecdh .ciphertext-value");
-        ciphertextValue.textContent = "";
-        const decryptedValue = document.querySelector(".ecdh .decrypted-value");
-        decryptedValue.textContent = "";
-
-        iv = window.crypto.getRandomValues(new Uint8Array(12));
-        let encoded = getMessageEncoding();
-
-        ciphertext = await window.crypto.subtle.encrypt(
-        {
-            name: "AES-GCM",
-            iv: iv
-        },
-        secretKey,
-        encoded
-        );
-
-        let buffer = new Uint8Array(ciphertext, 0, 5);
-        ciphertextValue.classList.add("fade-in");
-        ciphertextValue.addEventListener("animationend", () => {
-        ciphertextValue.classList.remove("fade-in");
-        });
-        ciphertextValue.textContent = `${buffer}...[${ciphertext.byteLength} bytes total]`;
+    function arrayBufferToBase64String(arrayBuffer) {
+      var byteArray = new Uint8Array(arrayBuffer)
+      var byteString = ''
+      for (var i=0; i<byteArray.byteLength; i++) {
+        byteString += String.fromCharCode(byteArray[i])
+      }
+      return btoa(byteString)
     }
 
-    /*
-    Decrypt the message using the secret key.
-    If the ciphertext was decrypted successfully,
-    update the "decryptedValue" box with the decrypted value.
-    If there was an error decrypting,
-    update the "decryptedValue" box with an error message.
-    */
-    async function decrypt(secretKey) {
-        const decryptedValue = document.querySelector(".ecdh .decrypted-value");
-        decryptedValue.textContent = "";
-        decryptedValue.classList.remove("error");
+    function base64StringToArrayBuffer(b64str) {
+      var byteStr = atob(b64str)
+      var bytes = new Uint8Array(byteStr.length)
+      for (var i = 0; i < byteStr.length; i++) {
+        bytes[i] = byteStr.charCodeAt(i)
+      }
+      return bytes.buffer
+    }
 
-        try {
-        let decrypted = await window.crypto.subtle.decrypt(
-            {
-            name: "AES-GCM",
-            iv: iv
-            },
-            secretKey,
-            ciphertext
-        );
+    function textToArrayBuffer(str) {
+      var buf = unescape(encodeURIComponent(str)) // 2 bytes for each char
+      var bufView = new Uint8Array(buf.length)
+      for (var i=0; i < buf.length; i++) {
+        bufView[i] = buf.charCodeAt(i)
+      }
+      return bufView
+    }
 
-        let dec = new TextDecoder();
-        decryptedValue.classList.add("fade-in");
-        decryptedValue.addEventListener("animationend", () => {
-            decryptedValue.classList.remove("fade-in");
-        });
-        decryptedValue.textContent = dec.decode(decrypted);
-        } catch (e) {
-        decryptedValue.classList.add("error");
-        decryptedValue.textContent = "*** Decryption error ***";
+    function arrayBufferToText(arrayBuffer) {
+      var byteArray = new Uint8Array(arrayBuffer)
+      var str = ''
+      for (var i=0; i<byteArray.byteLength; i++) {
+        str += String.fromCharCode(byteArray[i])
+      }
+      return str
+    }
+
+
+    function arrayBufferToBase64(arr) {
+      return btoa(String.fromCharCode.apply(null, new Uint8Array(arr)))
+    }
+
+    function convertBinaryToPem(binaryData, label) {
+      var base64Cert = arrayBufferToBase64String(binaryData)
+      var pemCert = "-----BEGIN " + label + "-----\r\n"
+      var nextIndex = 0
+      var lineLength
+      while (nextIndex < base64Cert.length) {
+        if (nextIndex + 64 <= base64Cert.length) {
+          pemCert += base64Cert.substr(nextIndex, 64) + "\r\n"
+        } else {
+          pemCert += base64Cert.substr(nextIndex) + "\r\n"
         }
-    }
-        
-        
-    /*
-    Derive an AES key, given:
-    - our ECDH private key
-    - their ECDH public key
-    */
-    function deriveSecretKey(privateKey, publicKey) {
-    return window.crypto.subtle.deriveKey(
-        {
-        name: "ECDH",
-        public: publicKey
-        },
-        privateKey,
-        {
-        name: "AES-GCM",
-        length: 256
-        },
-        false,
-        ["encrypt", "decrypt"]
-    );
+        nextIndex += 64
+      }
+      pemCert += "-----END " + label + "-----\r\n"
+      return pemCert
     }
 
-    let EDCHKeyPair;
-    window.crypto.subtle.generateKey(
-        {
-        name: "ECDH",
-        namedCurve: "P-384"
-        },
-        false,
-        ["deriveKey"]
-    ).then((newEDCHKeyPair)=>{
-        EDCHKeyPair = newEDCHKeyPair;
-        window.crypto.subtle.exportKey("jwk",EDCHKeyPair.publicKey)
-        .then((keyData)=>{
-            socket.emit('establishEncryption',keyData)
+    function convertPemToBinary(pem) {
+      var lines = pem.split('\n')
+      var encoded = ''
+      for(var i = 0;i < lines.length;i++){
+        if (lines[i].trim().length > 0 &&
+            lines[i].indexOf('-BEGIN RSA PRIVATE KEY-') < 0 &&
+            lines[i].indexOf('-BEGIN RSA PUBLIC KEY-') < 0 &&
+            lines[i].indexOf('-END RSA PRIVATE KEY-') < 0 &&
+            lines[i].indexOf('-END RSA PUBLIC KEY-') < 0) {
+          encoded += lines[i].trim()
+        }
+      }
+      return base64StringToArrayBuffer(encoded)
+    }
+
+    function importPublicDecryptKey(pemKey) {
+      return new Promise(function(resolve) {
+        var importer = crypto.subtle.importKey("spki", convertPemToBinary(pemKey), encryptAlgorithm, true, ["encrypt"])
+        importer.then(function(key) {
+          resolve(key)
+        }).catch((e)=>console.log(e.message))
+      })
+    }
+
+    function importPublicKey(pemKey) {
+      return new Promise(function(resolve) {
+        var importer = crypto.subtle.importKey("spki", convertPemToBinary(pemKey), signAlgorithm, true, ["verify"])
+        importer.then(function(key) {
+          resolve(key)
         })
-        .catch(function(err){
-            console.error(err);
-        });
-      });
+      })
+    }
+
+    function importPrivateKey(pemKey) {
+      return new Promise(function(resolve) {
+        var importer = crypto.subtle.importKey("pkcs8", convertPemToBinary(pemKey), signAlgorithm, true, ["sign"])
+        importer.then(function(key) {
+          resolve(key)
+        })
+      })
+    }
+
+    function exportPublicKey(keys) {
+      return new Promise(function(resolve) {
+        window.crypto.subtle.exportKey('spki', keys.publicKey).
+        then(function(spki) {
+          resolve(convertBinaryToPem(spki, "RSA PUBLIC KEY"))
+        })
+      })
+    }
+
+    function exportPrivateKey(keys) {
+      return new Promise(function(resolve) {
+        var expK = window.crypto.subtle.exportKey('pkcs8', keys.privateKey)
+        expK.then(function(pkcs8) {
+          resolve(convertBinaryToPem(pkcs8, "RSA PRIVATE KEY"))
+        })
+      })
+    }
+
+    function exportPemKeys(keys) {
+      return new Promise(function(resolve) {
+        exportPublicKey(keys).then(function(pubKey) {
+          exportPrivateKey(keys).then(function(privKey) {
+            resolve({publicKey: pubKey, privateKey: privKey})
+          })
+        })
+      })
+    }
+
+    function signData(key, data) {
+      return window.crypto.subtle.sign(signAlgorithm, key, data)
+    }
+
+    function testVerifySig(pub, sig, data) {
+      return crypto.subtle.verify(signAlgorithm, pub, sig, data)
+    }
+
+    function encryptData(key, data) {
+      return crypto.subtle.encrypt(
+        {
+          name: "RSA-OAEP",
+          //iv: vector
+        },
+        key,
+        textToArrayBuffer(data)
+      )
+    }
+
+    function decryptData(key, data) {
+      return crypto.subtle.decrypt(
+          {
+            name: "RSA-OAEP",
+            //iv: vector
+          },
+          key,
+          data
+      )
+    }
+
+    var signAlgorithm = {
+      name: "RSASSA-PKCS1-v1_5",
+      hash: {
+        name: "SHA-256"
+      },
+      modulusLength: 2048,
+      extractable: false,
+      publicExponent: new Uint8Array([1, 0, 1])
+    }
+
+    var encryptAlgorithm = {
+      name: "RSA-OAEP",
+      modulusLength: 2048,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      extractable: false,
+      hash: {
+        name: "SHA-256"
+      }
+    }
+
+    var scopeSign = ["sign", "verify"]
+    var scopeEncrypt = ["encrypt", "decrypt"]
+
+    let encryptKey = false;
+    let signKey = false;
+
+    generateKey(encryptAlgorithm, scopeEncrypt).then(function(keys) {
+      encryptKey = keys;
+      exportPublicKey(keys).then((key)=>{
+        console.log("PushEncryptKey"+key)
+        socket.emit("PushEncryptKey",key);
+      })
+      
+    }).catch((e)=>console.log(e.message))
+
+    generateKey(signAlgorithm, scopeSign).then(function(pair) {
+      signKey = pair.privateKey;
+      exportPemKeys(pair).then(function(keys) {
+        console.log("PushSignKey"+keys.publicKey)
+        socket.emit("PushSignKey",keys.publicKey);
+      })
+    })
     
     let publicKeys = {};
     socket.on("establishEncryption",(name,publicKey)=>{
-        window.crypto.subtle.importKey("jwk",publicKey,{name: "ECDH",namedCurve: "P-384",},false,["deriveKey"])
-        .then(function(publicKey){
-            console.log(publicKey);
-            publicKeys[name]=publicKey;
-            deriveSecretKey(EDCHKeyPair.privateKey, publicKey)
-            .then((secretK)=>{
-                console.log(secretK);
-            })
+      console.log("received Key from "+name+":")
+      console.log(publicKey)
+      importPublicKey(publicKey.sign).then(function(Skey) {
+        importPublicDecryptKey(publicKey.encrypt).then(function(Ekey) {
+          publicKeys[name] = {encrypt:Ekey,sign:Skey}
+          console.log(Skey);
+          console.log(Ekey);
         })
-        
+      })
     });
+
+    socket.on("encryptedDM",(msg)=>{
+      if(!publicKeys[msg.from])
+        return
+      decryptData(encryptKey.privateKey, msg.msg).then((message)=>{
+        message = arrayBufferToText(message)
+        crypto.subtle.verify(signAlgorithm,publicKeys[msg.from].sign, msg.signature, msg.msg).then(function(result) {
+          if(!result){
+            console.log("public Key:")
+            console.log(publicKeys[msg.from].sign)
+            console.log("signature:")
+            console.log(msg.signature)
+            console.log("message")
+            console.log(msg.msg)
+            console.log("decrypted msg")
+            console.log(message)
+            return alert(msg.from+" send an invalid message!!!")
+          }
+          if(msg.from==dmName) dm(msg.from,message);
+          else{
+              addMessageToDB(msg.from,msg.from,message);
+              if(!(dms.hasOwnProperty(msg.from))){
+                dms[msg.from] = [];
+              }
+              dms[msg.from].push({from:msg.from,msg:message});
+            }
+          console.log("Signature verified after importing PEM public key:", result)
+        })
+      });
+    })
     
 };
   

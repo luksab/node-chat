@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <title>Cool chat</title>
@@ -10,14 +11,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" async></script>
     <script src='https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js' async></script>
     <script src="https://rawgit.com/farzher/fuzzysort/master/fuzzysort.js" async></script>
-    <script src='/index.js' async></script>
+    <script src='/static/index.js' async></script>
 </head>
 <body>
-<div style="overflow:hidden;height:100%" >	
+<div style="overflow:hidden;height:100vh" >	
     <nav>
     <div id="mySidenav" class="sidenav">
         <a href="javascript:void(0)" class="closebtn" onclick="return cycleNavBar()">&times;</a>
-        <button class ="pushPushButton">Enable Push Messaging</button>
+        <a href="javascript:void(0)" class="settbtn" onclick="return openSettings()">&#9881;</a>
         <div id="contacts" align=center style="margin: 0.5em;">
                 <div id="contactSearch">
                 <input type="search" dir="auto" id="contactsSearch" title="Suchen oder neuen Chat beginnen" value="">

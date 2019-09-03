@@ -7,15 +7,10 @@ const fs = require('fs'),
  webpush = require('web-push');
 //Push Notification
 
-const pushOptions = {
-  gcmAPIKey: 'AIzaSyBWa36ejVuHV90FgaCrPdS8ajaHn4d4Au8',
-  vapidDetails: {
-      subject: 'https://luksab.de',
-      publicKey: 'BM_12EMi2xCAVhD2tn_gr3DugdW_bYnxtVCJd1qzAZTag5gi-IH97Vetc5sYfr155JiPGceLMVMXy29GmFCES20',
-      privateKey: 'IU8b2h7qG0qh_it2zHs9iSa3439J-PZrr_RS4N_q2Gs'
-  },headers: {}
-}
+const pushOptions = require(./pushOptions.json);
 let webPushSubs = {};
+const publicEncryptKeys = {}
+const publicSignKeys = {}
 
 const file = new static.Server(path.join(__dirname, '..', 'public'));
 const app = require('http').createServer((req,res)=>file.serve(req, res)).listen(8080);
@@ -77,21 +72,50 @@ var io = sio.listen(app,{pingTimeout: 5000}),
       }catch(e){console.log(e)}
     //socket.broadcast.emit('user message', socket.nickname, msg);
   });
+
+    socket.on('encryptedDM', function (msg) {
+      try{
+          //console.log("dm from "+socket.nickname+" to "+msg.user+": "+msg.msg);
+          users[msg.user].forEach((e)=>e.emit('encryptedDM', {from: socket.nickname,msg: msg.msg,signature:msg.signature}));
+      }catch(e){console.log(e)}
+      try{
+        console.log(webPushSubs[msg.user])
+        if(webPushSubs[msg.user])
+          webPushSubs[msg.user].forEach(element => {
+            webpush.sendNotification(
+              element,
+              ""+socket.nickname+": "+msg.msg,
+              pushOptions
+              );
+          });
+      }catch(e){console.log(e)}
+      //socket.broadcast.emit('user message', socket.nickname, msg);
+    });
     
     
-    let publicKeys = {}
-    socket.on('establishEncryption', function (publicKey) {
+    socket.on('PushEncryptKey', function (publicKey) {
         try{
-            publicKeys[socket.nickname] = publicKey;
-            console.log(socket.nickname+" is broadcasting Key "+publicKey.type);
-            socket.broadcast.emit('establishEncryption', socket.nickname, publicKey);
+            publicEncryptKeys[socket.nickname] = publicKey;
+            //console.log(socket.nickname+" is broadcasting encryption Key\n"+publicEncryptKeys[socket.nickname]);
+            //socket.broadcast.emit('establishEncryption', socket.nickname, publicKey);
         }catch(e){console.log(e)}
     });
     
+    socket.on('PushSignKey', function (publicKey) {
+        try{
+            publicSignKeys[socket.nickname] = publicKey;
+            //console.log(socket.nickname+" is broadcasting signing Key\n"+publicKey);
+            //socket.broadcast.emit('establishEncryption', socket.nickname, publicKey);
+        }catch(e){console.log(e)}
+    });
+
+
     socket.on('getKey', function (name) {
         try{
-            console.log(socket.nickname+" is requesting Key from "+name+" it is "+publicKeys[name]);
-            users[name].forEach((e)=>e.emit('establishEncryption',name, publicKeys[name]));
+          console.log(publicSignKeys)//prints {}, even after socket.on('PushEncryptKey') was called
+            console.log(socket.nickname+" is requesting Key from "+name+" it is "+publicEncryptKeys[name]+
+            " and "+publicSignKeys[name]);
+            socket.emit('establishEncryption',name, {encrypt:publicEncryptKeys[name],sign:publicSignKeys[name]});
         }catch(e){console.log(e)}
     });
 
@@ -125,6 +149,13 @@ var io = sio.listen(app,{pingTimeout: 5000}),
     socket.on('push', (pushSubscription) => {
       if(pushSubscription == null)
         return false;
+      if(webPushSubs[socket.nickname] != null){
+        let duplicate = false;
+        webPushSubs[socket.nickname].forEach((push)=>duplicate = (push.endpoint===pushSubscription.endpoint)?true:duplicate)
+        console.log("webPushSub has dup: "+duplicate)
+        if(duplicate)
+          return false;
+      }
       if(webPushSubs[socket.nickname] != null)
         return webPushSubs[socket.nickname].push(pushSubscription);
       webPushSubs[socket.nickname] = [];
