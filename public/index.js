@@ -144,7 +144,7 @@ window.onload = ()=>{
   if(dmName != "allChat"){
     document.getElementsByTagName('span')[0].innerText = "☰ "+((dmName==="allChat")?"Cool Chat":dmName);
   }
-  let allChat = [], nicknames=[];
+  let nicknames=[];
   let isSubscribed = false;
   let swRegistration = null;
   const applicationServerPublicKey = 'BM_12EMi2xCAVhD2tn_gr3DugdW_bYnxtVCJd1qzAZTag5gi-IH97Vetc5sYfr155JiPGceLMVMXy29GmFCES20';
@@ -288,7 +288,7 @@ window.onload = ()=>{
   let rightClickEvent;
 
   function deleteMsg(event){
-    if(event.path[0].innerHTML === "Yes" && rightClickEvent.rootEl.parentElement.getAttribute("id") === "lines" && rightClickEvent.rootEl.getAttribute("dbid") !== 0){
+    if(event.target.innerHTML === "Yes" && rightClickEvent.rootEl.parentElement.getAttribute("id") === "lines" && rightClickEvent.rootEl.getAttribute("dbid") !== 0){
       var trans = db.transaction(["messages"], 'readwrite');
       var objectStore = trans.objectStore("messages");
       var index = objectStore.index("chat");
@@ -316,12 +316,10 @@ window.onload = ()=>{
   });
   if (document.addEventListener) {
     document.addEventListener('contextmenu', function(e) {
-      let rootEl = e.path.find((el)=>{
-        //console.log(el.tagName)
-        /*if(el.getAttribute)
-          return el.getAttribute("dbid") > 0*/
-        return el.tagName === "P";
-      });
+      console.log(e.target.parentElement)
+      let rootEl = e.target.getAttribute("dbid")?e.target:e.target.parentElement;
+      rootEl = rootEl.getAttribute("dbid")?rootEl:null;
+      console.log(e.target.getAttribute("dbid"))
       console.log(rootEl || "Didn't click on a message!")
       if(rootEl && rootEl.parentElement.getAttribute("id") === "lines" && rootEl.getAttribute("dbid") !== 0){
         e.preventDefault();
@@ -413,13 +411,10 @@ window.onload = ()=>{
         socket.emit("getKey",dmName);
       document.getElementsByTagName('span')[1].innerText = "☰ "+((dmName==="allChat")?"Cool Chat":dmName);
       lines.innerHTML = '';
-      if(dmName === "allChat")
-          for(el of allChat)
-            lines.innerHTML += '<p><b>' + el.from + '</b>' + el.msg + '</p>';
-      else if(!MessageFromDB(dmName) && dms[dmName] != null)
+      if(!MessageFromDB(dmName) && dms[dmName] != null)
         for(let el of dms[dmName])
           lines.innerHTML += '<p><b>' + el.from + '</b>' + el.msg + '</p>';
-      setTimeout(()=>lines.scrollTop = Number.MAX_SAFE_INTEGER,10);
+      setTimeout(()=>lines.scrollTop = lines.scrollHeight,10);
     }
   });
 
@@ -446,11 +441,12 @@ window.onload = ()=>{
                 img.width = w;
               else
                 img.height = h;
+              img.onload = ()=>lines.scrollTop = lines.scrollHeight;
             }
           }
           cursor.continue();
         }
-        setTimeout(()=>lines.scrollTop = Number.MAX_SAFE_INTEGER,10);
+        setTimeout(()=>lines.scrollTop = lines.scrollHeight,10);
       }
       cursor.onerror = (e)=>console.log(e);
       return true;
@@ -475,7 +471,19 @@ window.onload = ()=>{
     catch(e){console.error(e)}
   }
   
-  function dm (from, msg, encrypted=false) {
+  function dm (from, msg, encrypted=false, chat=false) {
+    console.log(chat)
+    chat = chat?from:chat;
+    console.log(chat)
+    if(chat && chat !== dmName){
+      if(!(dms.hasOwnProperty(chat))){
+        dms[chat] = [];
+      }
+      dms[chat].push({from:from,msg:msg,encrypted:encrypted});
+      addMessageToDB(chat,from,msg,encrypted,lines.children[lines.children.length-1]);
+      return;
+    }
+    
     if(!(dms.hasOwnProperty(dmName))){
         dms[dmName] = [];
     }
@@ -494,23 +502,15 @@ window.onload = ()=>{
         img.width = w;
       else
         img.height = h;
+      img.onload = ()=>lines.scrollTop = lines.scrollHeight;
     }
-    setTimeout(()=>lines.scrollTop = Number.MAX_SAFE_INTEGER,10);
+    setTimeout(()=>lines.scrollTop = lines.scrollHeight,10);
   }
 
   //Todo: dm Pics, delete message typing, fix AllChat inreliablity
   socket.on('user message', (from,msg)=>AllChat(from,msg));
   socket.on('user image', image);
-  socket.on("dm",(msg)=>{
-      if(msg.from==dmName) dm(msg.from,msg.msg);
-      else{
-          addMessageToDB(msg.from,msg.from,msg.msg);
-          if(!(dms.hasOwnProperty(msg.from))){
-            dms[msg.from] = [];
-          }
-          dms[msg.from].push({from:msg.from,msg:msg.msg});
-        }
-    })
+  socket.on("dm",(msg)=>dm(msg.from,msg.msg))
   socket.on('reconnect', function () {
     //$('#lines').remove();
     socket.emit('nickname', {nick:localStorage.getItem('name'), passwd:localStorage.getItem('passwd')},(set) => {
@@ -554,16 +554,17 @@ window.onload = ()=>{
   });
 
   function AllChat(from, msg) {
-      allChat.push({from:from, msg:msg});
+    dm(from,msg,chat="allChat")
+      /*allChat.push({from:from, msg:msg});
       if(dmName == "allChat"){
           lines.innerHTML += '<p><b>' + from + '</b>' + msg + '</p>';
           setTimeout(()=>lines.scrollTop = Number.MAX_SAFE_INTEGER,10);
-      }
+      }*/
   }
   
   function message (from, msg) {
     lines.innerHTML += '<p><b>' + from + '</b>' + msg + '</p>';
-    setTimeout(()=>lines.scrollTop = Number.MAX_SAFE_INTEGER,10);
+    setTimeout(()=>lines.scrollTop = lines.scrollHeight,10);
   }
 
   function image (from, base64Image) {
@@ -571,9 +572,9 @@ window.onload = ()=>{
     //lines.innerHTML += '<p><b>' + from + '</b>' + '<img background-image src="' + base64Image + '" width="'+ w +'"/>' + '</p>';
     let h = (lines.clientHeight|0)-20;
     if(w<h)
-      dm("me",'<img background-image src="' + base64Image + '" width="'+ w +'"/>',false)
+      dm(from,'<img background-image src="' + base64Image + '" width="'+ w +'"/>',false)
     else
-      dm("me",'<img background-image src="' + base64Image + '" height="'+ h +'"/>',false)
+      dm(from,'<img background-image src="' + base64Image + '" height="'+ h +'"/>',false)
     //setTimeout(()=>lines.scrollTop = Number.MAX_SAFE_INTEGER);
   }
   
@@ -625,14 +626,14 @@ window.onload = ()=>{
               console.log("sending Encrypted MSG");
               socket.emit("encryptedDM",{user:dmName,msg:encyptedData,signature:SignedTest});
               $('#message').val('').focus();
-              $('#lines').get(0).scrollTop = Number.MAX_SAFE_INTEGER;
+              $('#lines').get(0).scrollTop = lines.scrollHeight;
             })
           })
         else{
           dm('me', $('#message').val());
           socket.emit('dm',{user: dmName , msg:$('#message').val()});
           $('#message').val('').focus();
-          $('#lines').get(0).scrollTop = Number.MAX_SAFE_INTEGER;
+          $('#lines').get(0).scrollTop = lines.scrollHeight;
         }
         return false;
       }
@@ -640,14 +641,14 @@ window.onload = ()=>{
       message('me', $('#message').val());
       socket.emit('user message', $('#message').val());
       $('#message').val('').focus();
-      $('#lines').get(0).scrollTop = Number.MAX_SAFE_INTEGER;
+      $('#lines').get(0).scrollTop = lines.scrollHeight;
       return false;
     });
     
     
     
     $('#imagefile').bind('change', function(e){
-        reduceFileSize(this.files[0], 500*1024, 600, Infinity, 0.7, blob => {
+        reduceFileSize(this.files[0], 600, Infinity, 0.9, blob => {
             image('me',blob);
             socket.emit('dmImage', {user: dmName,msg: blob});
         });
@@ -675,7 +676,7 @@ window.onload = ()=>{
             return blob;
         }
         let file = b64toBlob(results.dataURL.slice(22),results.dataURL.slice(5,results.dataURL.indexOf(";")));
-        reduceFileSize(file, 500*1024, 600, Infinity, 0.7, (blob,canvas) => {
+        reduceFileSize(file, 600, Infinity, 0.9, (blob,canvas) => {
             image('me',blob);
             socket.emit('dmImage', {user: dmName,msg: blob});
         });
@@ -776,7 +777,7 @@ window.onload = ()=>{
             return canvas;
         }
 
-        function reduceFileSize(file, acceptFileSize, maxWidth, maxHeight, quality, callback) {
+        function reduceFileSize(file, maxWidth, maxHeight, quality, callback) {
             /*if (file.size <= acceptFileSize) {
                 callback(file);
                 return;
