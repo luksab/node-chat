@@ -7,7 +7,7 @@ const fs = require('fs'),
  webpush = require('web-push');
 //Push Notification
 
-const pushOptions = require(./pushOptions.json);
+const pushOptions = require('../pushOptions.json');
 let webPushSubs = {};
 const publicEncryptKeys = {}
 const publicSignKeys = {}
@@ -39,7 +39,7 @@ var io = sio.listen(app,{pingTimeout: 5000}),
     socket.on('dm', function (msg) {
         try{
             //console.log("dm from "+socket.nickname+" to "+msg.user+": "+msg.msg);
-            users[msg.user].forEach((e)=>e.emit('dm', {from: socket.nickname,msg: msg.msg}));
+            users[msg.user].forEach((e)=>e.emit('dm', {from: socket.nickname,msg: sanitizeHtml(msg.msg, {allowedTags: [],allowedAttributes: {}})}));
         }catch(e){console.log(e)}
         try{
         console.log(webPushSubs[msg.user])
@@ -58,7 +58,7 @@ var io = sio.listen(app,{pingTimeout: 5000}),
     socket.on('dmImage', function (msg) {
       try{
           //console.log("dm from "+socket.nickname+" to "+msg.user+": "+msg.msg);
-          users[msg.user].forEach((e)=>e.emit('dmImage', {from: socket.nickname,msg: msg.msg}));
+          users[msg.user].forEach((e)=>e.emit('dmImage', {from: socket.nickname,msg: sanitizeHtml(msg.msg, {allowedTags: ["img","IMG"],allowedAttributes: {}})}));
       }catch(e){console.log(e)}
       try{
       console.log(webPushSubs[msg.user])
@@ -122,8 +122,10 @@ var io = sio.listen(app,{pingTimeout: 5000}),
     socket.on('nickname', function (nick, fn) {
       //console.log(nick);
       if(nick == null)
-          return socket.emit('reload');
+        return socket.emit('reload');
       nickname = sanitizeHtml(nick['nick'], {allowedTags: [],allowedAttributes: {}});
+      if(nickname == null)
+        return socket.emit('reload');
       if ((nicknames[nickname] && users[nickname][0].passwd == "") || nick === "" || nick == null){
         fn(true);
         return;

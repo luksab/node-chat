@@ -31,23 +31,23 @@
     </div>
     </nav>
     <header>
-    <span style="font-size:30px;cursor:pointer" onclick="return cycleNavBar()">&#9776; Cool Chat</span>
+    <span style="font-size:1em;cursor:pointer" onclick="return cycleNavBar()">&#9776; Cool Chat</span>
     </header>
     <main>
-    <div align=center id="chat" class="chat" onclick="return cycleNavBar(true)">
+    <div align=center id="chat" class="chat">
         <div id="nickname">
             <form class="wrap" id="set-nickname">
-            <label for="nick">Please type in your nickname and press enter.</label>
-            <input id="nick" name="nick" type="text" placeholder="nickname" autocomplete="off"/>
-            <input id="passwd" aria-label="password" type="password" placeholder="password (optional)" autocomplete="new-password"/>
-            <input type="submit" id="register" value="Register" margin = "10px">
-            <p id="nickname-err">Wrong password or nick unavailable</p>
+                <label for="nick">Please type in your nickname and press enter.</label>
+                <input id="nick" name="nick" type="text" placeholder="nickname" autocomplete="off"/>
+                <input id="passwd" aria-label="password" type="password" placeholder="password (optional)" autocomplete="new-password"/>
+                <input type="submit" id="register" value="Register" margin = "10px">
+                <p id="nickname-err">Wrong password or nick unavailable</p>
             </form>
         </div>
         <div id="connecting">
             <div class="wrap">Connecting to server...</div>
         </div>
-        <div id="messages">
+        <div id="messages" onclick="return cycleNavBar(true)">
             <div id="lines"></div>
         </div>
         <form id="send-message" style="display:flex;">
@@ -57,5 +57,10 @@
         </div>
     </div>
     </main>
+
+    <!-- initially hidden right-click menu -->
+    <div class="hide" id="rmenu">
+        
+    </div>
 </body>
 </html>

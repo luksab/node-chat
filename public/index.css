@@ -239,6 +239,14 @@ label {
   overflow-y: auto;
 }
 
+#messages p:nth-child(even).encrypted{
+  background: darkturquoise!important;
+}
+
+.encrypted {
+  background: rgb(0, 171, 173)!important;
+}
+
 #send-message{
   position: relative;
   max-height: 10%;
@@ -302,7 +310,7 @@ button, div.filebutton {
 button:hover, div.filebutton:hover,
 button.hover, div.filebutton.hover,
 button:active,
-button:focus, {
+button:focus {
   background: #009cb8;
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, .7),
              inset 0 0 10px #007287;
@@ -333,3 +341,46 @@ footer {
   margin: 0 auto;
 }
 
+
+
+
+.show {
+  z-index: 1000;
+  position: absolute;
+  background: rgba(0,0,0,0.3);
+  backdrop-filter: blur(0.2em);
+  border: 1px solid #00a5c3;
+  -webkit-border-radius: 7px;
+  -moz-border-radius: 7px;
+  border-radius: 7px;
+  display: block;
+  margin: 0;
+  list-style-type: none;
+  list-style: none;
+}
+
+.danger {
+  color: red;
+}
+
+.hide {
+  display: none;
+}
+
+.show li {
+  list-style: none;
+}
+
+.show a {
+  border: 0 !important;
+  text-decoration: none;
+}
+
+.show a:hover {
+  text-decoration: underline !important;
+}
+
+ul {
+  margin: 0;
+  padding: 0.5em;
+}

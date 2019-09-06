@@ -136,9 +136,9 @@ window.onload = ()=>{
     console.log('Object store created.');
 
   };
-    
-    
-    
+
+
+
   let lines = document.getElementById('lines'), contactsSearch = document.getElementById('contactsSearch');
   let dmName = location.search.substring(1)?location.search.substring(1):"allChat", dms={};
   if(dmName != "allChat"){
@@ -285,6 +285,88 @@ window.onload = ()=>{
 
 
 
+  let rightClickEvent;
+
+  function deleteMsg(event){
+    if(event.path[0].innerHTML === "Yes" && rightClickEvent.rootEl.parentElement.getAttribute("id") === "lines" && rightClickEvent.rootEl.getAttribute("dbid") !== 0){
+      var trans = db.transaction(["messages"], 'readwrite');
+      var objectStore = trans.objectStore("messages");
+      var index = objectStore.index("chat");
+  
+      // Make a request to delete the specified record out of the object store
+      console.log(rightClickEvent.rootEl.getAttribute("dbid"))
+      let id = parseInt(rightClickEvent.rootEl.getAttribute("dbid"));
+      if(id > 0){
+        var objectStoreRequest = objectStore.delete(id);
+        objectStoreRequest.onsuccess = function(event) {
+          console.log("deleted successfully");
+        };
+        objectStoreRequest.onerror = function(event) {
+          console.log("couldn't delete: "+event);
+        };
+        rightClickEvent.rootEl.parentElement.removeChild(rightClickEvent.rootEl);
+      }
+      else{
+        message('System', 'Couldn\'t delete message. Reloading might help.');
+      }
+    }
+  }
+  $(document).bind("click", function(event) {
+    document.getElementById("rmenu").className = "hide";
+  });
+  if (document.addEventListener) {
+    document.addEventListener('contextmenu', function(e) {
+      let rootEl = e.path.find((el)=>{
+        //console.log(el.tagName)
+        /*if(el.getAttribute)
+          return el.getAttribute("dbid") > 0*/
+        return el.tagName === "P";
+      });
+      console.log(rootEl || "Didn't click on a message!")
+      if(rootEl && rootEl.parentElement.getAttribute("id") === "lines" && rootEl.getAttribute("dbid") !== 0){
+        e.preventDefault();
+        document.getElementById("rmenu").innerHTML='<ul><li>Do you really want to delete the message?</li><li id="messageToDelete"> </li><li> <div><a class="danger" style="cursor: pointer;">Yes</a></div><div><a style="cursor: pointer;">No</a></div></li></ul>';
+        document.getElementById("rmenu").className = "show";
+        document.getElementById("rmenu").style.top = mouseY(event) + 'px';
+        document.getElementById("rmenu").style.left = mouseX(event) + 'px';
+        document.getElementById("rmenu").onclick = deleteMsg;
+        if(rootEl.children[1] && rootEl.children[1].tagName === "IMG")
+          document.getElementById("messageToDelete").innerHTML = '<b>'+rootEl.children[0].innerHTML+"</b>: Image";
+        else
+          document.getElementById("messageToDelete").innerHTML = rootEl.innerHTML;
+        rightClickEvent = e;
+        rightClickEvent.rootEl = rootEl;
+      }
+    }, false);
+  } else {
+    document.attachEvent('oncontextmenu', function() {
+      window.event.returnValue = false;
+    });
+  }
+  function mouseX(evt) {
+    if (evt.pageX) {
+      return evt.pageX;
+    } else if (evt.clientX) {
+      return evt.clientX + (document.documentElement.scrollLeft ?
+        document.documentElement.scrollLeft :
+        document.body.scrollLeft);
+    } else {
+      return null;
+    }
+  }
+  function mouseY(evt) {
+    if (evt.pageY) {
+      return evt.pageY;
+    } else if (evt.clientY) {
+      return evt.clientY + (document.documentElement.scrollTop ?
+        document.documentElement.scrollTop :
+        document.body.scrollTop);
+    } else {
+      return null;
+    }
+  }
+
+
 
 
 
@@ -327,7 +409,8 @@ window.onload = ()=>{
       cycleNavBar()
       const nickName = clickedEl.innerText;
       dmName = nickName;
-      socket.emit("getKey",dmName);
+      if(dmName !== "allChat")
+        socket.emit("getKey",dmName);
       document.getElementsByTagName('span')[1].innerText = "☰ "+((dmName==="allChat")?"Cool Chat":dmName);
       lines.innerHTML = '';
       if(dmName === "allChat")
@@ -336,6 +419,7 @@ window.onload = ()=>{
       else if(!MessageFromDB(dmName) && dms[dmName] != null)
         for(let el of dms[dmName])
           lines.innerHTML += '<p><b>' + el.from + '</b>' + el.msg + '</p>';
+      setTimeout(()=>lines.scrollTop = Number.MAX_SAFE_INTEGER,10);
     }
   });
 
@@ -349,10 +433,24 @@ window.onload = ()=>{
         var cursor = event.target.result;
         if(cursor){
           if(chat === cursor.value.chat){
-            lines.innerHTML += '<p><b>' + cursor.value.sender + '</b>' + cursor.value.message + '</p>'
+            if(typeof cursor.value.encrypted !== "undefined" && cursor.value.encrypted)
+              lines.innerHTML += '<p class="encrypted" dbID="'+cursor.value.id+'"><b>' + cursor.value.sender + '</b>' + cursor.value.message + '</p>';
+            else
+              lines.innerHTML += '<p dbID="'+cursor.value.id+'" ><b>' + cursor.value.sender + '</b>' + cursor.value.message + '</p>';
+            if(cursor.value.message.indexOf("<img") === 0){
+              const img = lines.children[lines.children.length-1].children[1];
+              img.removeAttribute("height");
+              img.removeAttribute("width");
+              const w = (lines.clientWidth|0)-20, h = (lines.clientHeight|0)-20;
+              if(w<h)
+                img.width = w;
+              else
+                img.height = h;
+            }
           }
           cursor.continue();
         }
+        setTimeout(()=>lines.scrollTop = Number.MAX_SAFE_INTEGER,10);
       }
       cursor.onerror = (e)=>console.log(e);
       return true;
@@ -360,12 +458,16 @@ window.onload = ()=>{
     catch(e){console.log(e);return false;}
   }
   
-  function addMessageToDB(chat,from,msg){
+  function addMessageToDB(chat,from,msg,encrypted=false,element=false){
     try{
       var trans = db.transaction(["messages"], 'readwrite');
       var objectStore = trans.objectStore("messages");
-      var request = objectStore.add({chat:chat,sender:from,message:msg});
-			request.onsuccess = function(event) {};   
+      var request = objectStore.add({chat:chat,sender:from,message:msg,encrypted:encrypted});
+			request.onsuccess = function(event) {
+        if(element)
+          element.setAttribute("dbid",event.srcElement.result)
+        console.log(event.srcElement.result)
+      };   
       request.onerror = function(event) {
           console.error(event);
       }
@@ -373,15 +475,27 @@ window.onload = ()=>{
     catch(e){console.error(e)}
   }
   
-  function dm (from, msg) {
-    addMessageToDB(dmName,from,msg);
-      
+  function dm (from, msg, encrypted=false) {
     if(!(dms.hasOwnProperty(dmName))){
         dms[dmName] = [];
     }
-    dms[dmName].push({from:from,msg:msg});
-    lines.innerHTML += '<p><b>' + from + '</b>' + msg + '</p>';
-    setTimeout(()=>lines.scrollTop = lines.scrollHeight);
+    dms[dmName].push({from:from,msg:msg,encrypted:encrypted});
+    if(encrypted)
+      lines.innerHTML += '<p class="encrypted"><b>' + from + '</b>' + msg + '</p>';
+    else
+      lines.innerHTML += '<p><b>' + from + '</b>' + msg + '</p>';
+    addMessageToDB(dmName,from,msg,encrypted,lines.children[lines.children.length-1]);
+    if(msg.indexOf("<img") === 0){
+      const img = lines.children[lines.children.length-1].children[1];
+      img.removeAttribute("height");
+      img.removeAttribute("width");
+      const w = (lines.clientWidth|0)-20, h = (lines.clientHeight|0)-20;
+      if(w<h)
+        img.width = w;
+      else
+        img.height = h;
+    }
+    setTimeout(()=>lines.scrollTop = Number.MAX_SAFE_INTEGER,10);
   }
 
   //Todo: dm Pics, delete message typing, fix AllChat inreliablity
@@ -412,6 +526,24 @@ window.onload = ()=>{
     message('System', 'Reconnected to the server');
   });
 
+  socket.on("dmImage",(msg)=>{
+    let w = (lines.clientWidth|0)-20;
+    let h = (lines.clientHeight|0)-20;
+    if(msg.from==dmName){
+      if(w<h)
+        dm(msg.from,'<img background-image src="' + msg.msg + '" width="'+ w +'"/>');
+      else
+        dm(msg.from,'<img background-image src="' + msg.msg + '" height="'+ h +'"/>');}
+    else{
+        addMessageToDB(msg.from,msg.from,'<img background-image src="' + msg.msg + '" width="'+ w +'"/>');
+        if(!(dms.hasOwnProperty(msg.from))){
+          dms[msg.from] = [];
+        }
+        dms[msg.from].push({from:msg.from,msg:'<img background-image src="' + msg.msg + '" width="'+ w +'"/>'});
+      }
+  })
+  
+
   /*socket.on('reconnecting', function () {
     message('System', 'Attempting to re-connect to the server');
   });*/
@@ -425,43 +557,36 @@ window.onload = ()=>{
       allChat.push({from:from, msg:msg});
       if(dmName == "allChat"){
           lines.innerHTML += '<p><b>' + from + '</b>' + msg + '</p>';
-          setTimeout(()=>lines.scrollTop = Number.MAX_SAFE_INTEGER);
+          setTimeout(()=>lines.scrollTop = Number.MAX_SAFE_INTEGER,10);
       }
   }
   
   function message (from, msg) {
     lines.innerHTML += '<p><b>' + from + '</b>' + msg + '</p>';
-    setTimeout(()=>lines.scrollTop = Number.MAX_SAFE_INTEGER);
+    setTimeout(()=>lines.scrollTop = Number.MAX_SAFE_INTEGER,10);
   }
 
   function image (from, base64Image) {
     let w = (lines.clientWidth|0)-20;
-    lines.innerHTML += '<p><b>' + from + '</b>' + '<img background-image src="' + base64Image + '" width="'+ w +'"/>' + '</p>';
-    setTimeout(()=>lines.scrollTop = Number.MAX_SAFE_INTEGER);
-  }
-  function imageCanvas (from, canvas) {
-    let w = (lines.clientWidth|0)-20;
-    let p = document.createElement("p");
-    let b = document.createElement("b");
-    p.appendChild(b);
-    b.appendChild(document.createTextNode(""+from));
-    canvas.style = "width :"+w;
-    p.appendChild(canvas);
-    lines.appendChild(p)
     //lines.innerHTML += '<p><b>' + from + '</b>' + '<img background-image src="' + base64Image + '" width="'+ w +'"/>' + '</p>';
-    setTimeout(()=>lines.scrollTop = Number.MAX_SAFE_INTEGER);
+    let h = (lines.clientHeight|0)-20;
+    if(w<h)
+      dm("me",'<img background-image src="' + base64Image + '" width="'+ w +'"/>',false)
+    else
+      dm("me",'<img background-image src="' + base64Image + '" height="'+ h +'"/>',false)
+    //setTimeout(()=>lines.scrollTop = Number.MAX_SAFE_INTEGER);
   }
   
   
   contactsSearch.onchange = contactsSearch.onkeyup = contactsSearch.onclick = ()=>{
     if(contactsSearch.value != ""){
         nicks = fuzzysort.go(contactsSearch.value,Object.values(nicknames),{threshold: -999});
-        console.log(nicks)
         $('#nicknames').empty().append($('<span>Online: </span>'));
         $('#nicknames').append($('<b>').text("allChat"));
         //var nicknames = document.getElementsByClassName("nicknames");
         for (var i in nicks) {
-            $('#nicknames').append($('<b>').text(nicks[i].target));
+            $('#nicknames').append($((nicks[i].target===localStorage.getItem('name'))?'<b style="background: coral">':'<b>').text(nicks[i].target));
+            $('#nicknames').append($('<b>').text());
         }
         return;
     }
@@ -469,7 +594,7 @@ window.onload = ()=>{
     $('#nicknames').append($('<b>').text("allChat"));
     //var nicknames = document.getElementsByClassName("nicknames");
     for (var i in nicknames) {
-        $('#nicknames').append($('<b>').text(nicknames[i]));
+        $('#nicknames').append($((nicknames[i]===localStorage.getItem('name'))?'<b style="background: coral">':'<b>').text(nicknames[i]));
     }
   };
   //
@@ -496,7 +621,7 @@ window.onload = ()=>{
         if(publicKeys[dmName])
           encryptData(publicKeys[dmName].encrypt, $('#message').val()).then((encyptedData)=>{
             signData(signKey, encyptedData).then((SignedTest)=>{
-              dm('me', $('#message').val());
+              dm('me', $('#message').val(), true);
               console.log("sending Encrypted MSG");
               socket.emit("encryptedDM",{user:dmName,msg:encyptedData,signature:SignedTest});
               $('#message').val('').focus();
@@ -524,7 +649,7 @@ window.onload = ()=>{
     $('#imagefile').bind('change', function(e){
         reduceFileSize(this.files[0], 500*1024, 600, Infinity, 0.7, blob => {
             image('me',blob);
-            socket.emit('user image', blob);
+            socket.emit('dmImage', {user: dmName,msg: blob});
         });
     });
     //var dataURL, filename;
@@ -551,8 +676,8 @@ window.onload = ()=>{
         }
         let file = b64toBlob(results.dataURL.slice(22),results.dataURL.slice(5,results.dataURL.indexOf(";")));
         reduceFileSize(file, 500*1024, 600, Infinity, 0.7, (blob,canvas) => {
-            imageCanvas('me',canvas);
-            socket.emit('user image', blob);
+            image('me',blob);
+            socket.emit('dmImage', {user: dmName,msg: blob});
         });
     });
   });
@@ -768,7 +893,7 @@ window.onload = ()=>{
       return base64StringToArrayBuffer(encoded)
     }
 
-    function importPublicDecryptKey(pemKey) {
+    function importPublicEncryptKey(pemKey) {
       return new Promise(function(resolve) {
         var importer = crypto.subtle.importKey("spki", convertPemToBinary(pemKey), encryptAlgorithm, true, ["encrypt"])
         importer.then(function(key) {
@@ -789,6 +914,15 @@ window.onload = ()=>{
     function importPrivateKey(pemKey) {
       return new Promise(function(resolve) {
         var importer = crypto.subtle.importKey("pkcs8", convertPemToBinary(pemKey), signAlgorithm, true, ["sign"])
+        importer.then(function(key) {
+          resolve(key)
+        })
+      })
+    }
+
+    function importPrivateDecryptKey(pemKey) {
+      return new Promise(function(resolve) {
+        var importer = crypto.subtle.importKey("pkcs8", convertPemToBinary(pemKey), encryptAlgorithm, true, ["decrypt"])
         importer.then(function(key) {
           resolve(key)
         })
@@ -879,29 +1013,65 @@ window.onload = ()=>{
     let encryptKey = false;
     let signKey = false;
 
-    generateKey(encryptAlgorithm, scopeEncrypt).then(function(keys) {
-      encryptKey = keys;
-      exportPublicKey(keys).then((key)=>{
-        console.log("PushEncryptKey"+key)
-        socket.emit("PushEncryptKey",key);
-      })
-      
-    }).catch((e)=>console.log(e.message))
+    if(localStorage.getItem('signKeyS')!=null && localStorage.getItem('encryptKeyS')!=null){
+      importPrivateKey(localStorage.getItem('signKeyS')).then(function(Skey) {
+        importPrivateDecryptKey(localStorage.getItem('encryptKeyS')).then(function(Ekey) {
+          signKey = Skey;
+          encryptKey = Ekey;
+          console.log("successfully imported Private Keys")
+        })
+      });
+    }
 
-    generateKey(signAlgorithm, scopeSign).then(function(pair) {
-      signKey = pair.privateKey;
-      exportPemKeys(pair).then(function(keys) {
-        console.log("PushSignKey"+keys.publicKey)
-        socket.emit("PushSignKey",keys.publicKey);
+    
+    if(localStorage.getItem('encryptKeyP') == null || localStorage.getItem('encryptKeyS') == null)
+      generateKey(encryptAlgorithm, scopeEncrypt).then(function(keys) {
+        encryptKey = keys.privateKey;
+        exportPublicKey(keys).then((key)=>{
+          localStorage.setItem('encryptKeyP', key);
+          console.log("PushEncryptKey"+key)
+          socket.emit("PushEncryptKey",key);
+        })
+        exportPrivateKey(keys).then((key)=>{
+          localStorage.setItem('encryptKeyS',key);
+        })
+      }).catch((e)=>console.log(e.message))
+    else{
+      let key = localStorage.getItem('encryptKeyP');
+      importPublicEncryptKey(key).then((key)=>{
+        encryptKey = key;
       })
-    })
+      console.log("PushEncryptKey"+key)
+      socket.emit("PushEncryptKey",key);
+    }
+
+    if(localStorage.getItem('signKeyP') == null || localStorage.getItem('signKeyS') == null)
+      generateKey(encryptAlgorithm, scopeEncrypt).then(function(keys) {
+        signKey = keys.privateKey;
+        exportPublicKey(keys).then((key)=>{
+          localStorage.setItem('signKeyP', key);
+          console.log("PushEncryptKey"+key)
+          socket.emit("PushEncryptKey",key);
+        })
+        exportPrivateKey(keys).then((key)=>{
+          localStorage.setItem('signKeyS',key);
+        })
+      }).catch((e)=>console.log(e.message))
+    else{
+      let key = localStorage.getItem('signKeyP');
+      importPublicKey(key).then((key)=>{
+        signKey = key;
+      })
+      console.log("PushSignKey"+key)
+      socket.emit("PushSignKey",key);
+    }
     
     let publicKeys = {};
     socket.on("establishEncryption",(name,publicKey)=>{
       console.log("received Key from "+name+":")
       console.log(publicKey)
       importPublicKey(publicKey.sign).then(function(Skey) {
-        importPublicDecryptKey(publicKey.encrypt).then(function(Ekey) {
+        importPublicEncryptKey(publicKey.encrypt).then(function(Ekey) {
           publicKeys[name] = {encrypt:Ekey,sign:Skey}
           console.log(Skey);
           console.log(Ekey);
@@ -912,7 +1082,7 @@ window.onload = ()=>{
     socket.on("encryptedDM",(msg)=>{
       if(!publicKeys[msg.from])
         return
-      decryptData(encryptKey.privateKey, msg.msg).then((message)=>{
+      decryptData(encryptKey, msg.msg).then((message)=>{
         message = arrayBufferToText(message)
         crypto.subtle.verify(signAlgorithm,publicKeys[msg.from].sign, msg.signature, msg.msg).then(function(result) {
           if(!result){
@@ -926,9 +1096,9 @@ window.onload = ()=>{
             console.log(message)
             return alert(msg.from+" send an invalid message!!!")
           }
-          if(msg.from==dmName) dm(msg.from,message);
+          if(msg.from==dmName) dm(msg.from,message,true);
           else{
-              addMessageToDB(msg.from,msg.from,message);
+              addMessageToDB(msg.from,msg.from,message,true);
               if(!(dms.hasOwnProperty(msg.from))){
                 dms[msg.from] = [];
               }
