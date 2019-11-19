@@ -3,7 +3,7 @@ const fs = require('fs'),
  sio = require('socket.io'),
  static = require('node-static'),
  sanitizeHtml = require('sanitize-html'),
- crypto = require('crypto'),
+ cryptoHash = require('crypto'),
  webpush = require('web-push');
 //Push Notification
 
@@ -12,7 +12,167 @@ let webPushSubs = {};
 const publicEncryptKeys = {}
 const publicSignKeys = {}
 
-const file = new static.Server(path.join(__dirname, '..', 'public'));
+let users = {
+  "ID1":{
+    "keys":{"encrypt":"Key1","sign":"Key2"},
+    "WebSockets":[],
+    "friends":["ID2","ID3"]
+  }
+  ,"ID2":{}}
+
+fs.readFile('/home/pi/node/node-chat/public/websocket/index.html', function (err, data) {
+  if (err) {
+      global["index"] = `Error getting the file: ${err}.`;
+  } else {
+      //res.writeHeader('Content-type', 'text/html');
+      global["index"] = data;
+  }
+});
+
+setInterval(() => {
+  fs.readFile('/home/pi/node/node-chat/public/websocket/index.html', function (err, data) {
+    if (err) {
+        global["index"] = `Error getting the file: ${err}.`;
+    } else {
+        //res.writeHeader('Content-type', 'text/html');
+        global["index"] = data;
+    }
+  });
+}, 1000);
+
+require('uWebSockets.js').App({})
+.ws('/*', {
+/* Options */
+compression: 1,
+maxPayloadLength: 16 * 1024 * 1024,
+idleTimeout: 30,
+/* Handlers */
+open: (ws, req) => {
+  console.log('A WebSocket connected via URL: ' + req.getUrl() + '!');
+},
+message: (ws, message, isBinary) => {
+  if(bufToStr(message) === "ping")
+    return;
+  /* Ok is false if backpressure was built up, wait for drain */
+
+  /*console.log(isBinary);
+  console.log(bufToStr(message));
+  console.log(new Uint8Array(message));*/
+  if(isBinary){
+    message = new Uint8Array(message);
+    let header = message[0];
+    let recipient = message.slice(1,5);
+    let msg = message.slice(5);
+    if(header == 0){
+      console.log("connection from",Buffer.from(recipient).readUInt32BE(0));
+
+    }
+  }
+  else{
+    message = bufToStr(message);
+    if(message === "register"){
+      let uid = generateUID();
+      console.log("ge");
+      const ok = ws.send(JSON.stringify({"type":"uid","uid":uid.toString(32)}));
+      console.log({"type":"uid","uid":uid});
+      users[uid] = {
+        "keys":{"enc":false,"sign":false},
+        "websockets":[ws],
+        "friends": []
+      }
+      ws["id"] = uid;
+      return;
+    }
+    let json = false;
+    try{
+      message = JSON.parse(message);
+      json = true;
+    }
+    catch{
+      json = false;
+    }
+    console.log(message)
+    if(json && message["type"] === "login"){
+      
+      if(true || users[message["uid"]]["keys"]["enc"] && users[message["uid"]]["keys"]["sign"]){
+        ws["verified"] = false;
+        users[message["uid"]]["websockets"].push(ws);
+        let randomMsg = randomStr(32);
+        ws["randomMsg"] = randomMsg;
+
+        encryptData(users[message["uid"]]["keys"]["enc"], randomMsg).then((encyptedData)=>{
+          ws.send(JSON.stringify({"type":"randomMsg","randomMsg":encyptedData}));
+        })
+      }else{
+        ws.send("No keys on the server for that uid!")
+      }
+    }
+  }
+  //const ok = ws.send(message.slice(5), isBinary);
+},
+drain: (ws) => {
+  console.log('WebSocket backpressure: ' + ws.getBufferedAmount());
+},
+close: (ws, code, message) => {
+  console.log('WebSocket closed');
+}
+}).any('/*', (res, req) => {
+  res.end(global["index"]);
+}).listen(8000, (token) => {
+if (token) {
+  console.log('Listening to port ' + 8000);
+} else {
+  console.log('Failed to listen to port ' + 8000);
+}
+});
+
+bufToStr = (message)=>Buffer.from(message).toString();
+
+let randomState = 1;
+function generateUID(){
+  var t = randomState += 0x6D2B79F5;
+  t = Math.imul(t ^ t >>> 15, t | 1);
+  t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+  return ((t ^ t >>> 14) >>> 0);
+}
+function randomStr(length) {
+  var result           = '';
+  var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  var charactersLength = characters.length;
+  for ( var i = 0; i < length; i++ ) {
+     result += characters.charAt(Math.floor(Math.random() * charactersLength));
+  }
+  return result;
+}
+
+
+
+var WebCrypto = require("node-webcrypto-ossl");
+ 
+var crypto = new WebCrypto({
+  directory: "key_storage"
+})
+
+function encryptData(key, data) {
+  return crypto.subtle.encrypt(
+    {
+      name: "RSA-OAEP",
+      //iv: vector
+    },
+    key,
+    textToArrayBuffer(data)
+  )
+}
+function textToArrayBuffer(str) {
+  var buf = unescape(encodeURIComponent(str)) // 2 bytes for each char
+  var bufView = new Uint8Array(buf.length)
+  for (var i=0; i < buf.length; i++) {
+    bufView[i] = buf.charCodeAt(i)
+  }
+  return bufView
+}
+
+/*const file = new static.Server(path.join(__dirname, '..', 'public'));
 const app = require('http').createServer((req,res)=>file.serve(req, res)).listen(8080);
 
 var io = sio.listen(app,{pingTimeout: 5000}),
@@ -119,7 +279,7 @@ var io = sio.listen(app,{pingTimeout: 5000}),
           /*console.log(publicSignKeys)//prints {}, even after socket.on('PushEncryptKey') was called
           console.log(socket.nickname+" is requesting Key from "+name+" it is "+publicEncryptKeys[name]+
             " and "+publicSignKeys[name]);*/
-          socket.emit('establishEncryption',name, {encrypt:publicEncryptKeys[name],sign:publicSignKeys[name]});
+          /*socket.emit('establishEncryption',name, {encrypt:publicEncryptKeys[name],sign:publicSignKeys[name]});
         }catch(e){console.log(e)}
     });
 
@@ -203,7 +363,7 @@ var io = sio.listen(app,{pingTimeout: 5000}),
       }
     });
   });
-  
+*/
 //disable crashing :)
 process.on('uncaughtException', function (err) {
   console.log('Caught exception: ', err);

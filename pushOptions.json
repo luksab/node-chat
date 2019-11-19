@@ -1,0 +1,8 @@
+{
+    "gcmAPIKey": "AIzaSyAeWhS_Tartzu-qdq_f3NudDXoqdLFr_U4",
+    "vapidDetails": {
+        "subject": "https://luksab.de",
+        "publicKey": "BM_12EMi2xCAVhD2tn_gr3DugdW_bYnxtVCJd1qzAZTag5gi-IH97Vetc5sYfr155JiPGceLMVMXy29GmFCES20",
+        "privateKey": "IU8b2h7qG0qh_it2zHs9iSa3439J-PZrr_RS4N_q2Gs"
+    },"headers": {}
+  }

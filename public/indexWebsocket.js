@@ -505,24 +505,51 @@ window.onload = ()=>{
 
 
 
-
-
-
-  const socket = io.connect();
-  socket.on('connect', function () {
-    $('#chat').addClass('connected');
-    
-    if(localStorage.getItem('name') !== null && localStorage.getItem('passwd') !== null){
-        socket.emit('nickname', {nick:localStorage.getItem('name'), passwd:localStorage.getItem('passwd')}, (set) => {
-                if (!set) {
-                message('System', 'Reconnected to the server with localStorage');
-                document.getElementById('message').disabled = false;
-                document.getElementById('imagefile').disabled = false;
-                return $('#chat').addClass('nickname-set');
-                } //localStorage.clear();
-            });
+  let reconnecting = false;
+  const wsConnect = ()=>{
+    reconnecting = false;
+    window.ws = new WebSocket("wss://luksab.de/websocket/index.html:8000");
+    window.ws.onopen = function () {
+      $('#chat').addClass('connected');
+      
+      if(localStorage.getItem('id') !== null){
+          window.ws.send({"type":"connect","id":localStorage.getItem('id')});
+          emit('nickname', {nick:localStorage.getItem('name'), passwd:localStorage.getItem('passwd')}, (set) => {
+                  if (!set) {
+                  message('System', 'Reconnected to the server with localStorage');
+                  document.getElementById('message').disabled = false;
+                  document.getElementById('imagefile').disabled = false;
+                  return $('#chat').addClass('nickname-set');
+                  } //localStorage.clear();
+              });
+      }
+    };
+    window.ws.onmessage = (message)=>{
+        console.log(message);
+        let msg = JSON.parse(message.data);
+        console.log(msg);
+        if(msg["type"]==="uid"){
+          let uid = parseInt(msg["uid"],32);
+          console.log(uid);
+        }
+    };
+    window.ws.onerror = window.ws.onclose = ()=>{
+        $('#chat').removeClass('connected');
+        if(reconnecting)
+          return console.log("already reconnecting!");
+        reconnecting = true;
+        console.log("reconnect");
+        window.setTimeout(wsConnect,5000);
     }
-  });
+  };
+  wsConnect();
+
+  window.setInterval(()=>{
+      if(window.ws.readyState === 1){
+          console.log("ping!");
+          window.ws.send("ping");
+      }
+  },10000)
 
   socket.on('announcement', function (msg) {
     $('#lines').append($('<p>').append($('<em>').text(msg)));

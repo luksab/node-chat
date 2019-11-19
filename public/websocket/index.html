@@ -6,14 +6,54 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#2F3BA2"/>
-    <link rel="manifest" href="/static/manifest.json">
+    <!--<link rel="manifest" href="/static/manifest.json">-->
     <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon16.png" />
     <link rel="apple-touch-icon" href="/images/icons/icon-192x192.png">
     <link rel="stylesheet" href="/index.css" media="none" onload="if(media!='all')media='all'">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" async></script>
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js' async></script>
     <script src="https://rawgit.com/farzher/fuzzysort/master/fuzzysort.js" async></script>
-    <script src='/index.js' async></script>
+    <script src='/indexWebsocket.js' async></script>
+    <script>
+        const b64toBlob = (b64Data, contentType='', sliceSize=512) => {
+        const byteCharacters = atob(b64Data);
+        const byteArrays = [];
+
+        for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+            const slice = byteCharacters.slice(offset, offset + sliceSize);
+
+            const byteNumbers = new Array(slice.length);
+            for (let i = 0; i < slice.length; i++) {
+            byteNumbers[i] = slice.charCodeAt(i);
+            }
+
+            const byteArray = new Uint8Array(byteNumbers);
+            byteArrays.push(byteArray);
+        }
+            
+        const blob = new Blob(byteArrays, {type: contentType});
+            return blob;
+        }
+
+        const contentType = 'image/png';
+        const b64Data = 'iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==';
+
+        const blob = b64toBlob(b64Data, contentType);
+        const blobUrl = URL.createObjectURL(blob);
+
+        const img = document.createElement('img');
+        img.src = blobUrl;
+
+        blob.arrayBuffer().then((arrayBuff)=>{
+            arr = new Uint8Array(arrayBuff);
+            arr = [0,0,0,1,0].concat(...arr);
+            buf = new Uint8Array(arr).buffer;
+
+            arr2= new Uint8Array(buf);
+        });
+
+
+        //document.querySelector("#connecting").appendChild(img);
+    </script>
 </head>
 <body>
 <div style="overflow:hidden;height:100vh" >	
@@ -40,11 +80,10 @@
     <div align=center id="chat" class="chat">
         <div id="nickname">
             <form class="wrap" id="set-nickname">
-                <label for="nick">Please type in your nickname and press enter.</label>
-                <input id="nick" name="nick" type="text" placeholder="nickname" autocomplete="off"/>
+                <label for="nick">Please type in your password and press enter.</label>
                 <input id="passwd" aria-label="password" type="password" placeholder="password (optional)" autocomplete="new-password"/>
                 <input type="submit" id="register" value="Register" margin = "10px">
-                <p id="nickname-err">Wrong password or nick unavailable</p>
+                <p id="nickname-err">Wrong password or other error...please try again</p>
             </form>
         </div>
         <div id="connecting">

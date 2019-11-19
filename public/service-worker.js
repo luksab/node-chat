@@ -33,11 +33,45 @@ function urlB64ToUint8Array(base64String) {
   return outputArray;
 }
 
+
+
+var DBOpenRequest = indexedDB.open("messages", 1);
+// these two event handlers act on the database being opened successfully, or not
+DBOpenRequest.onerror = function(event) {
+  console.error(event);
+};
+let db;
+DBOpenRequest.onsuccess = function(event) {
+  console.log("Database initialised");
+
+  // store the result of opening the database in the db variable. This is used a lot below
+  db = DBOpenRequest.result;
+};
+function addMessageToDB(chat,from,msg,encrypted=false,element=false){
+  try{
+    var trans = db.transaction(["messages"], 'readwrite');
+    var objectStore = trans.objectStore("messages");
+    var request = objectStore.add({chat:chat,sender:from,message:msg,encrypted:encrypted});
+    request.onsuccess = function(event) {
+      if(element)
+        element.setAttribute("dbid",event.srcElement.result)
+      console.log(event.srcElement.result)
+    };   
+    request.onerror = function(event) {
+        console.error(event);
+    }
+  }
+  catch(e){console.error(e)}
+}
+
 self.addEventListener('push', function(event) {
   console.log('[Service Worker] Push Received.');
   console.log(`[Service Worker] Push had this data: "${event.data.text()}"`);
   console.log(event)
 
+  let user = event.notification.body.substring(0,event.notification.body.indexOf(":"));
+  let message = event.notification.body.substring(event.notification.body.indexOf(":")+1);
+  addMessageToDB(user,user,message);
   const title = 'New dm!!!';
   const options = {
     body: event.data.text(),
@@ -78,8 +112,14 @@ const CACHE_NAME = 'static-cache-v1';
 
 // CODELAB: Add list of files to cache here.
 const FILES_TO_CACHE = [
+    '/',
+    '/index.html',
+    '/static/index.js',
+    '/static/index.css',
     '/static/offline.html',
-    '/static/favicon16.png'
+    '/static/favicon16.png',
+    '/static/manifest.json',
+    //'/static/favicon16.png',
 ];
 
 self.addEventListener('install', (evt) => {
@@ -92,6 +132,17 @@ self.addEventListener('install', (evt) => {
 );
   self.skipWaiting();
 });
+
+
+self.addEventListener('message', function (evt) {//JSON messages from main js
+  if(evt.data['delete'] === true)
+    caches.keys().then(function(names) {
+      for (let name of names)
+          caches.delete(name);
+    });
+  console.log('postMessage received', evt.data);
+})
+
 
 self.addEventListener('activate', (evt) => {
   console.log('[ServiceWorker] Activate');
@@ -109,18 +160,22 @@ self.addEventListener('activate', (evt) => {
 });
 
 self.addEventListener('fetch', (evt) => {
-  console.log('[ServiceWorker] Fetch', evt.request.url);
-  if (evt.request.mode !== 'navigate') {
+  //evt.request.cache = 'default';
+  console.log('[ServiceWorker] Fetch', evt.request);
+  if (evt.request.mode !== 'navigate' && evt.request.mode !== 'no-cors' && evt.request.mode !== 'cors') {
     // Not a page navigation, bail.
     return;
   }
+  console.log('still here');
   evt.respondWith(
-      fetch(evt.request)
-          .catch(() => {
-            return caches.open(CACHE_NAME)
-                .then((cache) => {
-                  return cache.match('offline.html');
-                });
-          })
-    );
-  });
+    caches.match(evt.request).then(function(response) {
+      console.log("Response:",response);
+      return response || fetch(evt.request).catch(() => {
+        return caches.open(CACHE_NAME)
+            .then((cache) => {
+              return cache.match('offline.html');
+            });
+      });
+    })
+  );
+});
