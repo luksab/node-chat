@@ -92,7 +92,7 @@ if(window.matchMedia('(min-width: 800px)').matches){
   }
 };
 
-window.onload = ()=>{    
+window.onload = ()=>{
   // Created by STRd6
   // MIT License
   // jquery.paste_image_reader.js
@@ -329,7 +329,8 @@ window.onload = ()=>{
   }
 
   function updateSubscriptionOnServer(subscription) {
-    socket.emit('push', subscription)
+    //TODO: PUSH SUBSCRIPTION
+    //window.ws.send(JSON.stringify({"type":"push","subscription":subscription}));
     console.log(JSON.stringify(subscription))
   }
   
@@ -509,32 +510,75 @@ window.onload = ()=>{
   const wsConnect = ()=>{
     reconnecting = false;
     window.ws = new WebSocket("wss://luksab.de/websocket/index.html:8000");
-    window.ws.onopen = function () {
+    window.ws.onopen = async function () {
       $('#chat').addClass('connected');
+      document.getElementById('register').disabled = false;
       
-      if(localStorage.getItem('id') !== null){
-          window.ws.send({"type":"connect","id":localStorage.getItem('id')});
-          emit('nickname', {nick:localStorage.getItem('name'), passwd:localStorage.getItem('passwd')}, (set) => {
-                  if (!set) {
-                  message('System', 'Reconnected to the server with localStorage');
-                  document.getElementById('message').disabled = false;
-                  document.getElementById('imagefile').disabled = false;
-                  return $('#chat').addClass('nickname-set');
-                  } //localStorage.clear();
-              });
+      const passwd = $('#passwd').val();
+      if(localStorage.getItem("encryptKeyS").indexOf("-----BEGIN RSA PRIVATE KEY-----") !== -1 &&
+        localStorage.getItem("signKeyS").indexOf("-----BEGIN RSA PRIVATE KEY-----") !== -1 &&
+        localStorage.getItem("uid") != null){
+          document.getElementById('register').value = "Login";
+          let privateEKey = await importPrivateDecryptKey(localStorage.getItem("encryptKeyS"));
+          let privateSKey = await importPrivateDecryptKey(localStorage.getItem("signKeyS"));
+          const toSend = {
+            "type":"login",
+            "uid":parseInt(localStorage.getItem("uid"),10).toString(32),
+          }
+          console.log(toSend);
+          return window.ws.send(JSON.stringify(toSend));
       }
     };
-    window.ws.onmessage = (message)=>{
+    window.ws.onmessage = async (message)=>{
         console.log(message);
         let msg = JSON.parse(message.data);
         console.log(msg);
+        if(msg["type"]==="error"){
+          console.error(msg["msg"]);
+          $('#chat').removeClass('nickname-set');
+          document.getElementById('register').disabled = false;
+          $('#nickname-err').css('visibility', 'visible');
+          document.getElementById('nickname-err').innerHTML = msg["msg"];
+          if(msg["code"] === "no uid"){
+            localStorage.removeItem("uid");
+          }
+        }
         if(msg["type"]==="uid"){
           let uid = parseInt(msg["uid"],32);
+          function base64StringToArrayBuffer(b64str) {
+            var byteStr = atob(b64str)
+            var bytes = new Uint8Array(byteStr.length)
+            for (var i = 0; i < byteStr.length; i++) {
+              bytes[i] = byteStr.charCodeAt(i)
+            }
+            return bytes.buffer
+          }
+          let FromBase64 = function (str) {
+              return new Uint8Array(atob(str).split('').map(function (c) { return c.charCodeAt(0); }));
+          }
+          console.log("from",FromBase64(msg["rS"]));
+          let privateKey = await importPrivateDecryptKey(localStorage.getItem("encryptKeyS"));
+          let randomMessage = await decryptData(privateKey,FromBase64(msg["rS"]));
           console.log(uid);
+          ws.uid = uid;
+          console.log(randomMessage);
+          console.log(arrayBufferToText(randomMessage));
+          window.ws.send(JSON.stringify({"type":"randomMsg","randomMsg":arrayBufferToText(randomMessage)}));
+        }else if(msg["type"] === "succsess"){
+          if (msg["succsess"]) {
+            localStorage.setItem("uid",ws.uid);
+            $('#message').val('').focus();
+            document.getElementById('message').disabled = false;
+            document.getElementById('imagefile').disabled = false;
+            return $('#chat').addClass('nickname-set');
+          } $('#nickname-err').css('visibility', 'visible');
         }
     };
     window.ws.onerror = window.ws.onclose = ()=>{
         $('#chat').removeClass('connected');
+        document.getElementById('message').disabled = true;
+        document.getElementById('imagefile').disabled = true;
+        document.getElementById('register').disabled = true;
         if(reconnecting)
           return console.log("already reconnecting!");
         reconnecting = true;
@@ -551,7 +595,7 @@ window.onload = ()=>{
       }
   },10000)
 
-  socket.on('announcement', function (msg) {
+  /*socket.on('announcement', function (msg) {
     $('#lines').append($('<p>').append($('<em>').text(msg)));
   });
 
@@ -566,7 +610,7 @@ window.onload = ()=>{
       $('#nicknames').append($((nicknames[i]===localStorage.getItem('name'))?'<b style="background: coral">':'<b>').text(nicknames[i]));
     }
   });
-  
+  */
   document.getElementById('nicknames').addEventListener('click', (ev) =>  {
     const clickedEl = ev.target;
     if(clickedEl.tagName == 'B') {
@@ -701,7 +745,7 @@ window.onload = ()=>{
     setTimeout(()=>lines.scrollTop = lines.scrollHeight,10);
   }
 
-  socket.on("dm",(msg)=>dm(msg.from,msg.msg,msg.uuid))
+  /*socket.on("dm",(msg)=>dm(msg.from,msg.msg,msg.uuid))
   /*socket.on('reconnect', function () {
     //$('#lines').remove();
     socket.emit('nickname', {nick:localStorage.getItem('name'), passwd:localStorage.getItem('passwd')},(set) => {
@@ -719,7 +763,7 @@ window.onload = ()=>{
     message('System', 'Reconnected to the server');
   });*/
 
-  socket.on("dmImage",(msg)=>{
+  /*socket.on("dmImage",(msg)=>{
     let w = (lines.clientWidth|0)-20;
     let h = (lines.clientHeight|0)-20;
     if(msg.from==dmName){
@@ -740,12 +784,12 @@ window.onload = ()=>{
   /*socket.on('reconnecting', function () {
     message('System', 'Attempting to re-connect to the server');
   });*/
-  socket.on('disconnect', ()=>message('System', 'Disconnected'));
+  /*socket.on('disconnect', ()=>message('System', 'Disconnected'));
 
   socket.on('error', function (e) {
     message('System', e ? e : 'A unknown error occurred');
-  });
-  
+  });*/
+
   function message (from, msg) {
     lines.innerHTML += '<p><b>' + from + '</b>' + msg + '</p>';
     setTimeout(()=>lines.scrollTop = lines.scrollHeight,10);
@@ -767,8 +811,7 @@ window.onload = ()=>{
     friends.add(friend);
     localStorage.setItem('friends', JSON.stringify([...friends]));
   }
-  
-  
+
   contactsSearch.onchange = contactsSearch.onkeyup = contactsSearch.onclick = ()=>{
     if(contactsSearch.value != ""){
         nicks = fuzzysort.go(contactsSearch.value,Object.values(nicknames),{threshold: -999});
@@ -791,17 +834,47 @@ window.onload = ()=>{
   //
   // dom manipulation code
   //
-  $(function () {
-    document.getElementById('register').onclick = function () {
-      localStorage.setItem('name', $('#nick').val());
-      localStorage.setItem('passwd', $('#passwd').val());
-      socket.emit('nickname', {nick:$('#nick').val(), passwd:$('#passwd').val()}, (set) => {
-        if (!set) {
-          $('#message').val('').focus();
-          document.getElementById('message').disabled = false;
-          document.getElementById('imagefile').disabled = false;
-          return $('#chat').addClass('nickname-set');
-        } $('#nickname-err').css('visibility', 'visible');
+    document.getElementById('register').onclick = async function () {
+      document.getElementById('register').disabled = true;
+      const passwd = $('#passwd').val();
+      if(localStorage.getItem("encryptKeyS").indexOf("-----BEGIN RSA PRIVATE KEY-----") !== -1 &&
+        localStorage.getItem("signKeyS").indexOf("-----BEGIN RSA PRIVATE KEY-----") !== -1 &&
+        localStorage.getItem("uid") != null){
+          console.log("login");
+          let privateEKey = await importPrivateDecryptKey(localStorage.getItem("encryptKeyS"));
+          let privateSKey = await importPrivateDecryptKey(localStorage.getItem("signKeyS"));
+          const toSend = {
+            "type":"login",
+            "uid":parseInt(localStorage.getItem("uid"),10).toString(32),
+          }
+          console.log(toSend);
+          return window.ws.send(JSON.stringify(toSend));
+      }
+      console.log("register");
+
+      generateKeys(passwd,(enc,sign)=>{
+        console.log("1");
+        deriveKey(saltBuf, passwd).then(function (keyBuf) {
+          console.log("keyBuf:",keyBuf);
+          //enc = await encryptMessage(keyBuf,enc);
+          //sign = await encryptMessage(keyBuf,sign);
+          localStorage.setItem("encryptKeyS",enc);
+          localStorage.setItem("signKeyS",sign);
+          console.log("hi1")
+
+          //console.log(await decryptMessage(keyBuf,enc));//localStorage.getItem('encryptKeyS')));
+
+          enc = localStorage.getItem('encryptKeyP');
+          sign= localStorage.getItem('signKeyP');
+          console.log("hi2")
+          const toSend = {
+            "type":"register",
+            "keys":{"enc":enc,"sign":sign},
+          }
+          console.log("hi3")
+          window.ws.send(JSON.stringify(toSend));
+          console.log("hi4")
+        });
       });
       return false;
     }
@@ -869,7 +942,6 @@ window.onload = ()=>{
             socket.emit('dmImage', {user: dmName,msg: blob,uuid:uuid});
         });
     });
-  });
   
   
         // From https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toBlob, needed for Safari:
@@ -1005,7 +1077,7 @@ window.onload = ()=>{
         var genkey = crypto.subtle.generateKey(alg, true, scope)
         genkey.then(function (pair) {
           resolve(pair)
-        }).catch((e)=>console.log(e.message))
+        }).catch((e)=>console.error(e.message))
       })
     }
 
@@ -1196,30 +1268,163 @@ window.onload = ()=>{
       }
     }
 
+    function deriveKey(saltBuf, passphrase) {
+      var keyLenBits = 128;
+      var kdfname = "PBKDF2";
+      var aesname = "AES-CBC"; // AES-CTR is also popular
+      // 100 - probably safe even on a browser running from a raspberry pi using pure js ployfill
+      // 10000 - no noticeable speed decrease on my MBP
+      // 100000 - you can notice
+      // 1000000 - annoyingly long
+      var iterations = 100; // something a browser on a raspberry pi or old phone could do
+      var hashname = "SHA-256";
+      var extractable = true;
+
+      console.log('');
+      console.log('passphrase', passphrase);
+      console.log('salt (hex)', Unibabel.bufferToHex(saltBuf));
+      console.log('iterations', iterations);
+      console.log('keyLen (bytes)', keyLenBits / 8);
+      console.log('digest', hashname);
+    
+      // First, create a PBKDF2 "key" containing the password
+      return crypto.subtle.importKey(
+        "raw",
+        Unibabel.utf8ToBuffer(passphrase),
+        { "name": kdfname },
+        false,
+        ["deriveKey"]).
+      // Derive a key from the password
+      then(function(passphraseKey){
+        return crypto.subtle.deriveKey(
+          { "name": kdfname
+          , "salt": saltBuf
+          , "iterations": iterations
+          , "hash": hashname
+          }
+        , passphraseKey
+          // required to be 128 (or 256) bits
+        , { "name": aesname, "length": keyLenBits } // Key we want
+        , extractable                               // Extractble
+        , [ "encrypt", "decrypt" ]                  // For new key
+        );
+      }).
+      // Export it so we can display it
+      then(function(aesKey) {
+        return aesKey;
+        return crypto.subtle.exportKey("raw", aesKey).then(function (arrbuf) {
+          return new Uint8Array(arrbuf);
+        });
+      }).
+      catch(function(err) {
+        window.alert("Key derivation failed: " + err.message);
+      });
+    }
+
     var scopeSign = ["sign", "verify"]
     var scopeEncrypt = ["encrypt", "decrypt"]
 
     let encryptKey = false;
     let signKey = false;
 
-    if(localStorage.getItem('signKeyS')!=null && localStorage.getItem('encryptKeyS')!=null){
-      importPrivateKey(localStorage.getItem('signKeyS')).then(function(Skey) {
-        importPrivateDecryptKey(localStorage.getItem('encryptKeyS')).then(function(Ekey) {
-          signKey = Skey;
-          encryptKey = Ekey;
-          console.log("successfully imported Private Keys")
-        })
-      });
+    var saltHex = '2618a03369d25a4bf216dd4136aa8a9cec15085a15d34ce9f21812f7b1e66863';
+    var saltBuf = Unibabel.hexToBuffer(saltHex);
+    var passphrase = 'secret';
+
+    var myIV = localStorage.getItem('myIV')
+    if(myIV==null){
+      myIV = window.crypto.getRandomValues(new Uint8Array(16));
+      localStorage.setItem('myIV',JSON.stringify(myIV));
+    }else{
+      myIV = new Uint8Array(Object.values(JSON.parse(myIV)));
     }
 
-    
+    async function encryptMessage(publicKey,msg,IV) {
+      if(IV == null){
+        IV = myIV;
+      }
+      let enc = new TextEncoder();
+      let dec = new TextDecoder("utf-8");
+      let encoded = enc.encode(msg);
+      let arr = await window.crypto.subtle.encrypt(
+        {
+          name: "AES-CBC",
+          iv: IV
+        },
+        publicKey,
+        encoded
+      );
+      return dec.decode(arr);
+    }
+
+    function separateIvFromData(buf) {
+      var iv = new Uint8Array(ivLen);
+      var data = new Uint8Array(buf.length - ivLen);
+      Array.prototype.forEach.call(buf, function (byte, i) {
+        if (i < ivLen) {
+          iv[i] = byte;
+        } else {
+          data[i - ivLen] = byte;
+        }
+      });
+      return { iv: iv, data: data };
+    }
+
+    async function decryptMessage(publicKey,msg,IV) {
+      //var parts = separateIvFromData(buf);//parts.iv, parts.data
+      if(IV == null){
+        IV = myIV;
+      }
+      let enc = new TextEncoder();
+      let dec = new TextDecoder("utf-8");
+      let buf = enc.encode(msg);
+      console.log(buf);
+      let arr = await crypto.subtle.decrypt({name: 'AES-CBC', iv: IV}, publicKey, buf)
+      console.log(buf);
+      return dec.decode(arr);
+    }
+
+    if(localStorage.getItem('signKeyS')!=null && localStorage.getItem('encryptKeyS')!=null &&
+       localStorage.getItem('signKeyS').indexOf("-----BEGIN RSA PRIVATE KEY-----") !== -1 &&
+       localStorage.getItem('encryptKeyS').indexOf("-----BEGIN RSA PRIVATE KEY-----") !== -1){
+        importPrivateKey(localStorage.getItem('signKeyS')).then(function(Skey) {
+          importPrivateDecryptKey(localStorage.getItem('encryptKeyS')).then(function(Ekey) {
+            signKey = Skey;
+            encryptKey = Ekey;
+            console.log("successfully imported Private Keys")
+          })
+        });
+    }
+
+    async function generateKeys(passwd,func){
+      if(
+        localStorage.getItem('signKeyS').indexOf("-----BEGIN RSA PRIVATE KEY-----") !== -1 &&
+        localStorage.getItem('encryptKeyS').indexOf("-----BEGIN RSA PRIVATE KEY-----") !== -1
+      )
+      return func(localStorage.getItem("encryptKeyS"),localStorage.getItem("signKeyS"));
+      let ekeys = await generateKey(encryptAlgorithm, scopeEncrypt);
+        encryptKey = ekeys.privateKey;
+        let publicEKey = await exportPublicKey(ekeys)
+          localStorage.setItem('encryptKeyP', publicEKey);
+        let privateEKey= await exportPrivateKey(ekeys)
+          localStorage.setItem('encryptKeyS',privateEKey);
+      let skeys = await generateKey(encryptAlgorithm, scopeEncrypt)
+        signKey = skeys.privateKey;
+        let publicSKey = await exportPublicKey(skeys);
+          localStorage.setItem('signKeyP', publicSKey);
+        let privateSKey= await exportPrivateKey(skeys);
+          localStorage.setItem('signKeyS',privateSKey);
+      
+      func(privateEKey,privateSKey);
+    }
+
     if(localStorage.getItem('encryptKeyP') == null || localStorage.getItem('encryptKeyS') == null)
       generateKey(encryptAlgorithm, scopeEncrypt).then(function(keys) {
         encryptKey = keys.privateKey;
         exportPublicKey(keys).then((key)=>{
           localStorage.setItem('encryptKeyP', key);
           console.log("PushEncryptKey"+key)
-          socket.emit("PushEncryptKey",key);
+          //socket.emit("PushEncryptKey",key);
         })
         exportPrivateKey(keys).then((key)=>{
           localStorage.setItem('encryptKeyS',key);
@@ -1231,7 +1436,7 @@ window.onload = ()=>{
         encryptKey = key;
       })
       console.log("PushEncryptKey"+key)
-      socket.emit("PushEncryptKey",key);
+      //socket.emit("PushEncryptKey",key);
     }
 
     if(localStorage.getItem('signKeyP') == null || localStorage.getItem('signKeyS') == null)
@@ -1240,7 +1445,7 @@ window.onload = ()=>{
         exportPublicKey(keys).then((key)=>{
           localStorage.setItem('signKeyP', key);
           console.log("PushEncryptKey"+key)
-          socket.emit("PushEncryptKey",key);
+          //socket.emit("PushEncryptKey",key);
         })
         exportPrivateKey(keys).then((key)=>{
           localStorage.setItem('signKeyS',key);
@@ -1252,11 +1457,11 @@ window.onload = ()=>{
         signKey = key;
       })
       console.log("PushSignKey"+key)
-      socket.emit("PushSignKey",key);
+      //socket.emit("PushSignKey",key);
     }
-    
+
     let publicKeys = {};
-    socket.on("establishEncryption",(name,publicKey)=>{
+    /*socket.on("establishEncryption",(name,publicKey)=>{
       console.log("received Key from "+name+":")
       console.log(publicKey)
       importPublicKey(publicKey.sign).then(function(Skey) {
@@ -1296,7 +1501,7 @@ window.onload = ()=>{
           console.log("Signature verified after importing PEM public key:", result)
         })
       });
-    })
+    })*/
     
 };
   
@@ -1306,3 +1511,202 @@ window.onload = ()=>{
   
   
   
+
+(function () {//Unibabel
+  'use strict';
+  
+  function utf8ToBinaryString(str) {
+    var escstr = encodeURIComponent(str);
+    // replaces any uri escape sequence, such as %0A,
+    // with binary escape, such as 0x0A
+    var binstr = escstr.replace(/%([0-9A-F]{2})/g, function(match, p1) {
+      return String.fromCharCode(parseInt(p1, 16));
+    });
+  
+    return binstr;
+  }
+  
+  function utf8ToBuffer(str) {
+    var binstr = utf8ToBinaryString(str);
+    var buf = binaryStringToBuffer(binstr);
+    return buf;
+  }
+  
+  function utf8ToBase64(str) {
+    var binstr = utf8ToBinaryString(str);
+    return btoa(binstr);
+  }
+  
+  function binaryStringToUtf8(binstr) {
+    var escstr = binstr.replace(/(.)/g, function (m, p) {
+      var code = p.charCodeAt(0).toString(16).toUpperCase();
+      if (code.length < 2) {
+        code = '0' + code;
+      }
+      return '%' + code;
+    });
+  
+    return decodeURIComponent(escstr);
+  }
+  
+  function bufferToUtf8(buf) {
+    var binstr = bufferToBinaryString(buf);
+  
+    return binaryStringToUtf8(binstr);
+  }
+  
+  function base64ToUtf8(b64) {
+    var binstr = atob(b64);
+  
+    return binaryStringToUtf8(binstr);
+  }
+  
+  function bufferToBinaryString(buf) {
+    var binstr = Array.prototype.map.call(buf, function (ch) {
+      return String.fromCharCode(ch);
+    }).join('');
+  
+    return binstr;
+  }
+  
+  function bufferToBase64(arr) {
+    var binstr = bufferToBinaryString(arr);
+    return btoa(binstr);
+  }
+  
+  function binaryStringToBuffer(binstr) {
+    var buf;
+  
+    if ('undefined' !== typeof Uint8Array) {
+      buf = new Uint8Array(binstr.length);
+    } else {
+      buf = [];
+    }
+  
+    Array.prototype.forEach.call(binstr, function (ch, i) {
+      buf[i] = ch.charCodeAt(0);
+    });
+  
+    return buf;
+  }
+  
+  function base64ToBuffer(base64) {
+    var binstr = atob(base64);
+    var buf = binaryStringToBuffer(binstr);
+    return buf;
+  }
+  
+  window.Unibabel = {
+    utf8ToBinaryString: utf8ToBinaryString
+  , utf8ToBuffer: utf8ToBuffer
+  , utf8ToBase64: utf8ToBase64
+  , binaryStringToUtf8: binaryStringToUtf8
+  , bufferToUtf8: bufferToUtf8
+  , base64ToUtf8: base64ToUtf8
+  , bufferToBinaryString: bufferToBinaryString
+  , bufferToBase64: bufferToBase64
+  , binaryStringToBuffer: binaryStringToBuffer
+  , base64ToBuffer: base64ToBuffer
+  
+  // compat
+  , strToUtf8Arr: utf8ToBuffer
+  , utf8ArrToStr: bufferToUtf8
+  , arrToBase64: bufferToBase64
+  , base64ToArr: base64ToBuffer
+  };
+  
+  }());
+
+  (function () {
+'use strict';
+
+function bufferToHex(arr) {
+  var i;
+  var len;
+  var hex = '';
+  var c;
+
+  for (i = 0, len = arr.length; i < len; i += 1) {
+    c = arr[i].toString(16);
+    if (c.length < 2) {
+      c = '0' + c;
+    }
+    hex += c;
+  }
+
+  return hex;
+}
+
+function hexToBuffer(hex) {
+  // TODO use Uint8Array or ArrayBuffer or DataView
+  var i;
+  var byteLen = hex.length / 2;
+  var arr;
+  var j = 0;
+
+  if (byteLen !== parseInt(byteLen, 10)) {
+    throw new Error("Invalid hex length '" + hex.length + "'");
+  }
+
+  arr = new Uint8Array(byteLen);
+
+  for (i = 0; i < byteLen; i += 1) {
+    arr[i] = parseInt(hex[j] + hex[j + 1], 16);
+    j += 2;
+  }
+
+  return arr;
+}
+
+// Hex Convenience Functions
+window.Unibabel.hexToBuffer = hexToBuffer;
+window.Unibabel.bufferToHex = bufferToHex;
+
+}());
+
+(function () {//Unibabel Hex
+'use strict';
+
+function bufferToHex(arr) {
+  var i;
+  var len;
+  var hex = '';
+  var c;
+
+  for (i = 0, len = arr.length; i < len; i += 1) {
+    c = arr[i].toString(16);
+    if (c.length < 2) {
+      c = '0' + c;
+    }
+    hex += c;
+  }
+
+  return hex;
+}
+
+function hexToBuffer(hex) {
+  // TODO use Uint8Array or ArrayBuffer or DataView
+  var i;
+  var byteLen = hex.length / 2;
+  var arr;
+  var j = 0;
+
+  if (byteLen !== parseInt(byteLen, 10)) {
+    throw new Error("Invalid hex length '" + hex.length + "'");
+  }
+
+  arr = new Uint8Array(byteLen);
+
+  for (i = 0; i < byteLen; i += 1) {
+    arr[i] = parseInt(hex[j] + hex[j + 1], 16);
+    j += 2;
+  }
+
+  return arr;
+}
+
+// Hex Convenience Functions
+window.Unibabel.hexToBuffer = hexToBuffer;
+window.Unibabel.bufferToHex = bufferToHex;
+
+}());

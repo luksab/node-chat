@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="/index.css" media="none" onload="if(media!='all')media='all'">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" async></script>
     <script src="https://rawgit.com/farzher/fuzzysort/master/fuzzysort.js" async></script>
+    
     <script src='/indexWebsocket.js' async></script>
     <script>
         const b64toBlob = (b64Data, contentType='', sliceSize=512) => {
@@ -79,10 +80,10 @@
     <main>
     <div align=center id="chat" class="chat">
         <div id="nickname">
-            <form class="wrap" id="set-nickname">
+            <form action="#" class="wrap" id="set-nickname">
                 <label for="nick">Please type in your password and press enter.</label>
                 <input id="passwd" aria-label="password" type="password" placeholder="password (optional)" autocomplete="new-password"/>
-                <input type="submit" id="register" value="Register" margin = "10px">
+                <input type="submit" id="register" value="Register" margin = "10px" disabled>
                 <p id="nickname-err">Wrong password or other error...please try again</p>
             </form>
         </div>

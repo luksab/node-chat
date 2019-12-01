@@ -203,7 +203,7 @@ var io = sio.listen(app,{pingTimeout: 5000}),
       }
     });
   });
-  
+console.log("starting :)");
 //disable crashing :)
 process.on('uncaughtException', function (err) {
   console.log('Caught exception: ', err);

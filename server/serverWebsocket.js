@@ -12,15 +12,15 @@ let webPushSubs = {};
 const publicEncryptKeys = {}
 const publicSignKeys = {}
 
-let users = {
+let users = {/*
   "ID1":{
     "keys":{"encrypt":"Key1","sign":"Key2"},
     "WebSockets":[],
     "friends":["ID2","ID3"]
   }
-  ,"ID2":{}}
+  ,"ID2":{}*/}
 
-fs.readFile('/home/pi/node/node-chat/public/websocket/index.html', function (err, data) {
+fs.readFile('/home/lukas/node/node-chat/public/websocket/index.html', function (err, data) {
   if (err) {
       global["index"] = `Error getting the file: ${err}.`;
   } else {
@@ -30,7 +30,7 @@ fs.readFile('/home/pi/node/node-chat/public/websocket/index.html', function (err
 });
 
 setInterval(() => {
-  fs.readFile('/home/pi/node/node-chat/public/websocket/index.html', function (err, data) {
+  fs.readFile('/home/lukas/node/node-chat/public/websocket/index.html', function (err, data) {
     if (err) {
         global["index"] = `Error getting the file: ${err}.`;
     } else {
@@ -50,7 +50,7 @@ idleTimeout: 30,
 open: (ws, req) => {
   console.log('A WebSocket connected via URL: ' + req.getUrl() + '!');
 },
-message: (ws, message, isBinary) => {
+message: async (ws, message, isBinary) => {
   if(bufToStr(message) === "ping")
     return;
   /* Ok is false if backpressure was built up, wait for drain */
@@ -70,19 +70,6 @@ message: (ws, message, isBinary) => {
   }
   else{
     message = bufToStr(message);
-    if(message === "register"){
-      let uid = generateUID();
-      console.log("ge");
-      const ok = ws.send(JSON.stringify({"type":"uid","uid":uid.toString(32)}));
-      console.log({"type":"uid","uid":uid});
-      users[uid] = {
-        "keys":{"enc":false,"sign":false},
-        "websockets":[ws],
-        "friends": []
-      }
-      ws["id"] = uid;
-      return;
-    }
     let json = false;
     try{
       message = JSON.parse(message);
@@ -91,22 +78,76 @@ message: (ws, message, isBinary) => {
     catch{
       json = false;
     }
-    console.log(message)
-    if(json && message["type"] === "login"){
-      
-      if(true || users[message["uid"]]["keys"]["enc"] && users[message["uid"]]["keys"]["sign"]){
-        ws["verified"] = false;
-        users[message["uid"]]["websockets"].push(ws);
-        let randomMsg = randomStr(32);
-        ws["randomMsg"] = randomMsg;
-
-        encryptData(users[message["uid"]]["keys"]["enc"], randomMsg).then((encyptedData)=>{
-          ws.send(JSON.stringify({"type":"randomMsg","randomMsg":encyptedData}));
-        })
-      }else{
-        ws.send("No keys on the server for that uid!")
+    if(json && message["type"] === "register"){
+      console.log("register");
+      let uid = generateUID();
+      let randomMsgOrig = randomStr(32);
+      console.log("randomMsg:",randomMsgOrig);
+      let pK = await importPublicEncryptKey(message["keys"]["enc"]);
+      let randomMsg = await encryptData(pK, randomMsgOrig);
+      function arrayBufferToBase64( buffer ) {
+        var binary = '';
+        var bytes = new Uint8Array( buffer );
+        var len = bytes.byteLength;
+        for (var i = 0; i < len; i++) {
+            binary += String.fromCharCode( bytes[ i ] );
+        }
+        return btoa( binary );
       }
+      //console.log("to",arrayBufferToBase64(randomMsg));
+      const ok = ws.send(JSON.stringify({"type":"uid","uid":uid.toString(32),"rS":arrayBufferToBase64(randomMsg)}));
+      //console.log({"type":"uid","uid":uid});
+      users[uid] = {
+        "keys":{"enc":await importPublicEncryptKey(message["keys"]["enc"]),"sign":await importPublicEncryptKey(message["keys"]["sign"])},
+        "ws":[ws],
+        "friends": []
+      }
+      console.log("users["+uid+"]="+users[uid])
+      ws["uid"] = uid;
+      ws["verified"] = false;
+      ws["randomMsg"] = randomMsgOrig;
+      return;
     }
+    if(json && message["type"] === "randomMsg"){
+      console.log(message["randomMsg"],ws["randomMsg"])
+      if(message["randomMsg"] == ws["randomMsg"]){
+        ws["verified"] = true;
+        ws.send(JSON.stringify({"type":"succsess","succsess":true}));
+      }
+      else
+        ws.send(JSON.stringify({"type":"succsess","succsess":false}));
+      return;
+    }
+    if(json && message["type"] === "login"){
+      console.log("login");
+      message["uid"] = parseInt(message["uid"],32);
+      if(users[message["uid"]] != null && users[message["uid"]]["keys"]["enc"] && users[message["uid"]]["keys"]["sign"]){
+        ws["verified"] = false;
+        message["uid"] = parseInt(message["uid"]);
+        console.log("uid:",message["uid"]);
+        users[message["uid"]]["ws"].push(ws);
+        let randomMsgOrig = randomStr(32);
+        ws["randomMsg"] = randomMsgOrig;
+        ws["uid"] = message["uid"];
+
+        let randomMsg = await encryptData(users[message["uid"]]["keys"]["enc"], randomMsgOrig);
+        function arrayBufferToBase64( buffer ) {
+          var binary = '';
+          var bytes = new Uint8Array( buffer );
+          var len = bytes.byteLength;
+          for (var i = 0; i < len; i++) {
+              binary += String.fromCharCode( bytes[ i ] );
+          }
+          return btoa( binary );
+        }
+        //console.log("to",arrayBufferToBase64(randomMsg));
+        const ok = ws.send(JSON.stringify({"type":"uid","uid":ws["uid"].toString(32),"rS":arrayBufferToBase64(randomMsg)}));
+      }else{
+        ws.send(JSON.stringify({"type":"error","code":"no uid","msg":"No keys on the server for that uid!<br>This means that your account is not present on the Server and you have to make a new one."}));
+      }
+      return;
+    }
+    console.log(message)
   }
   //const ok = ws.send(message.slice(5), isBinary);
 },
@@ -114,6 +155,12 @@ drain: (ws) => {
   console.log('WebSocket backpressure: ' + ws.getBufferedAmount());
 },
 close: (ws, code, message) => {
+  console.log(users[ws["uid"]]);
+  if(users[ws["uid"]]){
+    console.log("pre: "+users[ws["uid"]]["ws"].length)
+    users[ws["uid"]]["ws"].splice(users[ws["uid"]]["ws"].indexOf(ws),1);
+    console.log("post: "+users[ws["uid"]]["ws"].length)
+  }
   console.log('WebSocket closed');
 }
 }).any('/*', (res, req) => {
@@ -152,6 +199,57 @@ var WebCrypto = require("node-webcrypto-ossl");
 var crypto = new WebCrypto({
   directory: "key_storage"
 })
+function base64StringToArrayBuffer(b64str) {
+  var byteStr = atob(b64str)
+  var bytes = new Uint8Array(byteStr.length)
+  for (var i = 0; i < byteStr.length; i++) {
+    bytes[i] = byteStr.charCodeAt(i)
+  }
+  return bytes.buffer
+}
+
+function convertPemToBinary(pem) {
+  var lines = pem.split('\n')
+  var encoded = ''
+  for(var i = 0;i < lines.length;i++){
+    if (lines[i].trim().length > 0 &&
+        lines[i].indexOf('-BEGIN RSA PRIVATE KEY-') < 0 &&
+        lines[i].indexOf('-BEGIN RSA PUBLIC KEY-') < 0 &&
+        lines[i].indexOf('-END RSA PRIVATE KEY-') < 0 &&
+        lines[i].indexOf('-END RSA PUBLIC KEY-') < 0) {
+      encoded += lines[i].trim()
+    }
+  }
+  return base64StringToArrayBuffer(encoded)
+}
+
+var encryptAlgorithm = {
+  name: "RSA-OAEP",
+  modulusLength: 2048,
+  publicExponent: new Uint8Array([1, 0, 1]),
+  extractable: false,
+  hash: {
+    name: "SHA-256"
+  }
+}
+
+function importPublicEncryptKey(pemKey) {
+  return new Promise(function(resolve) {
+    var importer = crypto.subtle.importKey("spki", convertPemToBinary(pemKey), encryptAlgorithm, true, ["encrypt"])
+    importer.then(function(key) {
+      resolve(key)
+    }).catch((e)=>console.log(e.message))
+  })
+}
+
+function importPublicKey(pemKey) {
+  return new Promise(function(resolve) {
+    var importer = crypto.subtle.importKey("spki", convertPemToBinary(pemKey), signAlgorithm, true, ["verify"])
+    importer.then(function(key) {
+      resolve(key)
+    })
+  })
+}
 
 function encryptData(key, data) {
   return crypto.subtle.encrypt(
@@ -163,6 +261,7 @@ function encryptData(key, data) {
     textToArrayBuffer(data)
   )
 }
+
 function textToArrayBuffer(str) {
   var buf = unescape(encodeURIComponent(str)) // 2 bytes for each char
   var bufView = new Uint8Array(buf.length)
