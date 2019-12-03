@@ -227,7 +227,7 @@ window.onload = ()=>{
   const pushButton = document.querySelector('.pushButton');
   const isTouch = (('ontouchstart' in window) || (navigator.MaxTouchPoints > 0));
 
-  if ('serviceWorker' in navigator && 'PushManager' in window) {
+  if (false &&'serviceWorker' in navigator && 'PushManager' in window) {
     navigator.serviceWorker.register('/service-worker.js')
     .then(function(swReg) {
       console.log('Service Worker is registered', swReg);
@@ -509,7 +509,11 @@ window.onload = ()=>{
   let reconnecting = false;
   const wsConnect = ()=>{
     reconnecting = false;
-    window.ws = new WebSocket("wss://luksab.de/websocket/index.html:8000");
+    if(location.href === "http://localhost:8000/"){
+      window.ws = new WebSocket("ws://localhost:8000/index.html");
+    }
+    else
+      window.ws = new WebSocket("wss://luksab.de/websocket/index.html:8000");
     window.ws.onopen = async function () {
       $('#chat').addClass('connected');
       document.getElementById('register').disabled = false;

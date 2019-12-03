@@ -1,7 +1,5 @@
 const fs = require('fs'),
  path = require('path'),
- sio = require('socket.io'),
- static = require('node-static'),
  sanitizeHtml = require('sanitize-html'),
  cryptoHash = require('crypto'),
  webpush = require('web-push');
@@ -164,7 +162,12 @@ close: (ws, code, message) => {
   console.log('WebSocket closed');
 }
 }).any('/*', (res, req) => {
-  res.end(global["index"]);
+  if(req.getUrl() == "/")
+    data = fs.readFileSync('/home/lukas/node/node-chat/public/websocket/index.html');
+  else
+    data = fs.readFileSync('/home/lukas/node/node-chat/public'+req.getUrl());
+  res.end(data);
+  //res.end(global["index"]);
 }).listen(8000, (token) => {
 if (token) {
   console.log('Listening to port ' + 8000);
