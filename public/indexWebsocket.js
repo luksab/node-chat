@@ -537,6 +537,12 @@ window.onload = ()=>{
         console.log(message);
         let msg = JSON.parse(message.data);
         console.log(msg);
+        if(msg["type"]==="dm"){
+          return dm(msg.from,msg.msg,msg.uuid);
+        }
+        if(msg["type"]==="whois"){
+          users[msg["uid"]] = msg["name"];
+        }
         if(msg["type"]==="error"){
           console.error(msg["msg"]);
           $('#chat').removeClass('nickname-set');
@@ -564,7 +570,8 @@ window.onload = ()=>{
           let privateKey = await importPrivateDecryptKey(localStorage.getItem("encryptKeyS"));
           let randomMessage = await decryptData(privateKey,FromBase64(msg["rS"]));
           console.log(uid);
-          ws.uid = uid;
+          window.ws.uid = uid;
+          users[uid] = "me";
           console.log(randomMessage);
           console.log(arrayBufferToText(randomMessage));
           window.ws.send(JSON.stringify({"type":"randomMsg","randomMsg":arrayBufferToText(randomMessage)}));
@@ -713,7 +720,11 @@ window.onload = ()=>{
     catch(e){console.error(e)}
   }
   
+  let users = {};
+
   function dm (from, msg, uuid, encrypted=false, chat=false) {
+    console.log(users);
+    from = users[from] || from;
     console.log(uuid)
     chat = chat?from:chat;
     console.log(chat)
@@ -818,7 +829,7 @@ window.onload = ()=>{
 
   contactsSearch.onchange = contactsSearch.onkeyup = contactsSearch.onclick = ()=>{
     if(contactsSearch.value != ""){
-        nicks = fuzzysort.go(contactsSearch.value,Object.values(nicknames),{threshold: -999});
+        let nicks = fuzzysort.go(contactsSearch.value,Object.values(nicknames),{threshold: -999});
         $('#nicknames').empty().append($('<span>Online: </span>'));
         $('#nicknames').append($('<b>').text("allChat"));
         //var nicknames = document.getElementsByClassName("nicknames");
@@ -826,7 +837,7 @@ window.onload = ()=>{
             $('#nicknames').append($((nicks[i].target===localStorage.getItem('name'))?'<b style="background: coral">':'<b>').text(nicks[i].target));
             $('#nicknames').append($('<b>').text());
         }
-        return;
+        return ws.send(JSON.stringify({"type":"userSearch","search":contactsSearch.value}));
     }
     $('#nicknames').empty().append($('<span>Online: </span>'));
     $('#nicknames').append($('<b>').text("allChat"));
@@ -857,27 +868,22 @@ window.onload = ()=>{
       console.log("register");
 
       generateKeys(passwd,(enc,sign)=>{
-        console.log("1");
         deriveKey(saltBuf, passwd).then(function (keyBuf) {
           console.log("keyBuf:",keyBuf);
           //enc = await encryptMessage(keyBuf,enc);
           //sign = await encryptMessage(keyBuf,sign);
           localStorage.setItem("encryptKeyS",enc);
           localStorage.setItem("signKeyS",sign);
-          console.log("hi1")
 
           //console.log(await decryptMessage(keyBuf,enc));//localStorage.getItem('encryptKeyS')));
 
           enc = localStorage.getItem('encryptKeyP');
           sign= localStorage.getItem('signKeyP');
-          console.log("hi2")
           const toSend = {
             "type":"register",
             "keys":{"enc":enc,"sign":sign},
           }
-          console.log("hi3")
           window.ws.send(JSON.stringify(toSend));
-          console.log("hi4")
         });
       });
       return false;
@@ -892,14 +898,16 @@ window.onload = ()=>{
             signData(signKey, encyptedData).then((SignedTest)=>{
               dm('me', $('#message').val(),uuid, true);
               console.log("sending Encrypted MSG");
-              socket.emit("encryptedDM",{user:dmName,msg:encyptedData,signature:SignedTest,uuid:uuid});
+              console.log(JSON.stringify({"type":"encryptedDM","user":dmName,"msg":encyptedData,"signature":SignedTest,"uuid":uuid}))
+              window.ws.send(JSON.stringify({"type":"encryptedDM","user":dmName,"msg":encyptedData,"signature":SignedTest,"uuid":uuid}));
               $('#message').val('').focus();
               $('#lines').get(0).scrollTop = lines.scrollHeight;
             })
           })
         else{
           dm('me', $('#message').val(),uuid);
-          socket.emit('dm',{user: dmName , msg:$('#message').val(),uuid:uuid});
+          console.log(JSON.stringify({"type":"dm","user":dmName,"msg":$('#message').val(),"uuid":uuid}))
+          window.ws.send(JSON.stringify({"type":"dm","user":dmName,"msg":$('#message').val(),"uuid":uuid}));
           $('#message').val('').focus();
           $('#lines').get(0).scrollTop = lines.scrollHeight;
         }

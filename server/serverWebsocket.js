@@ -13,11 +13,24 @@ const publicSignKeys = {}
 let users = {/*
   "ID1":{
     "keys":{"encrypt":"Key1","sign":"Key2"},
-    "WebSockets":[],
+    "ws":[],
     "friends":["ID2","ID3"]
   }
   ,"ID2":{}*/}
 
+var MongoClient = require('mongodb').MongoClient;
+var url = "mongodb://localhost:27017/";
+var dbo = false;
+MongoClient.connect(url,{useUnifiedTopology: true}, function(err, db) {
+  if (err) throw err;
+  dbo = db.db("Chat");
+  dbo.collection("variables").findOne({"name":"randomState"},function(err, result) {
+    if (err) throw err;
+    if(result != null)
+      randomState = result.randomState;
+    //db.close();
+  });
+});
 fs.readFile('/home/lukas/node/node-chat/public/websocket/index.html', function (err, data) {
   if (err) {
       global["index"] = `Error getting the file: ${err}.`;
@@ -76,7 +89,37 @@ message: async (ws, message, isBinary) => {
     catch{
       json = false;
     }
-    if(json && message["type"] === "register"){
+    if(json && message["type"] === "dm"){
+      if(message["user"] === "allChat"){
+        let name = false;
+        if(users[ws["uid"]].name){
+          name = users[message["uid"]].name;
+        }
+        for(let user in users){
+          users[user].ws.forEach(usersWs => {
+            if(name)
+              usersWs.send(JSON.stringify({"type":"whois","uid":ws["uid"],"name":name}))
+            if(message.chat)
+              usersWs.send(JSON.stringify({"type":"dm","from":ws.uid,"msg":message["msg"],"uuid":message["uuid"],"chat":message["chat"]}));
+            else
+              usersWs.send(JSON.stringify({"type":"dm","from":ws.uid,"msg":message["msg"],"uuid":message["uuid"]}));
+          });
+        }
+      }
+    }
+    else if(json && message["type"] === "whois"){
+      if(users[message["uid"]].name){
+        let name = users[message["uid"]].name;
+        ws.send(JSON.stringify({"type":"whois","uid":message["uid"],"name":name}))
+      }
+    }
+    else if(json && message["type"] === "userSearch"){
+      if(users[message["search"]] && users[message["search"]]["name"]){
+        ws.send(JSON.stringify({"userName":users[message["search"]]["name"]}));
+      }
+      return;
+    }
+    else if(json && message["type"] === "register"){
       console.log("register");
       let uid = generateUID();
       let randomMsgOrig = randomStr(32);
@@ -100,13 +143,21 @@ message: async (ws, message, isBinary) => {
         "ws":[ws],
         "friends": []
       }
+      dbo.collection("users").insertOne({
+        "uid":uid,
+        "friends": [],
+        "keys":{"enc":message["keys"]["enc"],"sign":message["keys"]["sign"]}
+      }, function(err, res) {
+        if (err) throw err;
+        console.log("user "+uid+" inserted");
+      });
       console.log("users["+uid+"]="+users[uid])
       ws["uid"] = uid;
       ws["verified"] = false;
       ws["randomMsg"] = randomMsgOrig;
       return;
     }
-    if(json && message["type"] === "randomMsg"){
+    else if(json && message["type"] === "randomMsg"){
       console.log(message["randomMsg"],ws["randomMsg"])
       if(message["randomMsg"] == ws["randomMsg"]){
         ws["verified"] = true;
@@ -116,7 +167,7 @@ message: async (ws, message, isBinary) => {
         ws.send(JSON.stringify({"type":"succsess","succsess":false}));
       return;
     }
-    if(json && message["type"] === "login"){
+    else if(json && message["type"] === "login"){
       console.log("login");
       message["uid"] = parseInt(message["uid"],32);
       if(users[message["uid"]] != null && users[message["uid"]]["keys"]["enc"] && users[message["uid"]]["keys"]["sign"]){
@@ -183,6 +234,10 @@ function generateUID(){
   var t = randomState += 0x6D2B79F5;
   t = Math.imul(t ^ t >>> 15, t | 1);
   t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+  dbo.collection("variables").updateOne({"name":"randomState"},{$set:{"randomState":randomState}}, function(err, res) {
+    if (err) throw err;
+    console.log("randomState "+randomState+" updated");
+  });
   return ((t ^ t >>> 14) >>> 0);
 }
 function randomStr(length) {
