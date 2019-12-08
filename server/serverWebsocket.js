@@ -14,20 +14,37 @@ let users = {/*
   "ID1":{
     "keys":{"encrypt":"Key1","sign":"Key2"},
     "ws":[],
-    "friends":["ID2","ID3"]
+    "friends":["ID2","ID3"],
+    "name": "[name]"
   }
   ,"ID2":{}*/}
 
 var MongoClient = require('mongodb').MongoClient;
 var url = "mongodb://localhost:27017/";
 var dbo = false;
-MongoClient.connect(url,{useUnifiedTopology: true}, function(err, db) {
+MongoClient.connect(url,{
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  poolSize: 10,
+}, function(err, db) {
   if (err) throw err;
   dbo = db.db("Chat");
   dbo.collection("variables").findOne({"name":"randomState"},function(err, result) {
     if (err) throw err;
     if(result != null)
       randomState = result.randomState;
+    //db.close();
+  });
+  dbo.collection("users").find({}).toArray(async function(err, result) {
+    if (err) throw err;
+    for(user of result){
+      users[user["uid"]] = {
+        "keys":{"enc":await importPublicEncryptKey(user["keys"]["enc"]),"sign":await importPublicEncryptKey(user["keys"]["sign"])},
+        "ws":[],
+        "friends": user["friends"]
+      };
+    }
+    //console.log(result);
     //db.close();
   });
 });
@@ -76,7 +93,6 @@ message: async (ws, message, isBinary) => {
     let msg = message.slice(5);
     if(header == 0){
       console.log("connection from",Buffer.from(recipient).readUInt32BE(0));
-
     }
   }
   else{
@@ -89,97 +105,48 @@ message: async (ws, message, isBinary) => {
     catch{
       json = false;
     }
-    if(json && message["type"] === "dm"){
-      if(message["user"] === "allChat"){
-        let name = false;
-        if(users[ws["uid"]].name){
-          name = users[message["uid"]].name;
+    if(json)
+    switch (message["type"]) {
+      case "dm":{
+        if(message["user"] === "allChat"){
+          let name = false;
+          if(users[ws["uid"]].name){
+            name = users[message["uid"]].name;
+          }
+          for(let user in users){
+            users[user].ws.forEach(usersWs => {
+              if(name)
+                usersWs.send(JSON.stringify({"type":"whois","uid":ws["uid"],"name":name}))
+              if(message.chat)
+                usersWs.send(JSON.stringify({"type":"dm","from":ws.uid,"msg":message["msg"],"uuid":message["uuid"],"chat":message["chat"]}));
+              else
+                usersWs.send(JSON.stringify({"type":"dm","from":ws.uid,"msg":message["msg"],"uuid":message["uuid"]}));
+            });
+          }
         }
-        for(let user in users){
-          users[user].ws.forEach(usersWs => {
-            if(name)
-              usersWs.send(JSON.stringify({"type":"whois","uid":ws["uid"],"name":name}))
-            if(message.chat)
-              usersWs.send(JSON.stringify({"type":"dm","from":ws.uid,"msg":message["msg"],"uuid":message["uuid"],"chat":message["chat"]}));
-            else
-              usersWs.send(JSON.stringify({"type":"dm","from":ws.uid,"msg":message["msg"],"uuid":message["uuid"]}));
-          });
+        break;
+      }
+      case "whois":{
+        console.log("message=",message);
+        if(users[message["uid"]] && users[message["uid"]].name){
+          let name = users[message["uid"]].name;
+          ws.send(JSON.stringify({"type":"whois","uid":message["uid"],"name":name}))
         }
+        break;
       }
-    }
-    else if(json && message["type"] === "whois"){
-      if(users[message["uid"]].name){
-        let name = users[message["uid"]].name;
-        ws.send(JSON.stringify({"type":"whois","uid":message["uid"],"name":name}))
-      }
-    }
-    else if(json && message["type"] === "userSearch"){
-      if(users[message["search"]] && users[message["search"]]["name"]){
-        ws.send(JSON.stringify({"userName":users[message["search"]]["name"]}));
-      }
-      return;
-    }
-    else if(json && message["type"] === "register"){
-      console.log("register");
-      let uid = generateUID();
-      let randomMsgOrig = randomStr(32);
-      console.log("randomMsg:",randomMsgOrig);
-      let pK = await importPublicEncryptKey(message["keys"]["enc"]);
-      let randomMsg = await encryptData(pK, randomMsgOrig);
-      function arrayBufferToBase64( buffer ) {
-        var binary = '';
-        var bytes = new Uint8Array( buffer );
-        var len = bytes.byteLength;
-        for (var i = 0; i < len; i++) {
-            binary += String.fromCharCode( bytes[ i ] );
+      case "userSearch":{
+        if(users[message["search"]] && users[message["search"]]["name"]){
+          ws.send(JSON.stringify({"userName":users[message["search"]]["name"]}));
         }
-        return btoa( binary );
+        break;
       }
-      //console.log("to",arrayBufferToBase64(randomMsg));
-      const ok = ws.send(JSON.stringify({"type":"uid","uid":uid.toString(32),"rS":arrayBufferToBase64(randomMsg)}));
-      //console.log({"type":"uid","uid":uid});
-      users[uid] = {
-        "keys":{"enc":await importPublicEncryptKey(message["keys"]["enc"]),"sign":await importPublicEncryptKey(message["keys"]["sign"])},
-        "ws":[ws],
-        "friends": []
-      }
-      dbo.collection("users").insertOne({
-        "uid":uid,
-        "friends": [],
-        "keys":{"enc":message["keys"]["enc"],"sign":message["keys"]["sign"]}
-      }, function(err, res) {
-        if (err) throw err;
-        console.log("user "+uid+" inserted");
-      });
-      console.log("users["+uid+"]="+users[uid])
-      ws["uid"] = uid;
-      ws["verified"] = false;
-      ws["randomMsg"] = randomMsgOrig;
-      return;
-    }
-    else if(json && message["type"] === "randomMsg"){
-      console.log(message["randomMsg"],ws["randomMsg"])
-      if(message["randomMsg"] == ws["randomMsg"]){
-        ws["verified"] = true;
-        ws.send(JSON.stringify({"type":"succsess","succsess":true}));
-      }
-      else
-        ws.send(JSON.stringify({"type":"succsess","succsess":false}));
-      return;
-    }
-    else if(json && message["type"] === "login"){
-      console.log("login");
-      message["uid"] = parseInt(message["uid"],32);
-      if(users[message["uid"]] != null && users[message["uid"]]["keys"]["enc"] && users[message["uid"]]["keys"]["sign"]){
-        ws["verified"] = false;
-        message["uid"] = parseInt(message["uid"]);
-        console.log("uid:",message["uid"]);
-        users[message["uid"]]["ws"].push(ws);
+      case "register":{
+        console.log("register");
+        let uid = generateUID();
         let randomMsgOrig = randomStr(32);
-        ws["randomMsg"] = randomMsgOrig;
-        ws["uid"] = message["uid"];
-
-        let randomMsg = await encryptData(users[message["uid"]]["keys"]["enc"], randomMsgOrig);
+        console.log("randomMsg:",randomMsgOrig);
+        let pK = await importPublicEncryptKey(message["keys"]["enc"]);
+        let randomMsg = await encryptData(pK, randomMsgOrig);
         function arrayBufferToBase64( buffer ) {
           var binary = '';
           var bytes = new Uint8Array( buffer );
@@ -190,13 +157,93 @@ message: async (ws, message, isBinary) => {
           return btoa( binary );
         }
         //console.log("to",arrayBufferToBase64(randomMsg));
-        const ok = ws.send(JSON.stringify({"type":"uid","uid":ws["uid"].toString(32),"rS":arrayBufferToBase64(randomMsg)}));
-      }else{
-        ws.send(JSON.stringify({"type":"error","code":"no uid","msg":"No keys on the server for that uid!<br>This means that your account is not present on the Server and you have to make a new one."}));
+        const ok = ws.send(JSON.stringify({"type":"uid","uid":uid.toString(32),"rS":arrayBufferToBase64(randomMsg)}));
+        //console.log({"type":"uid","uid":uid});
+        users[uid] = {
+          "keys":{"enc":await importPublicEncryptKey(message["keys"]["enc"]),"sign":await importPublicEncryptKey(message["keys"]["sign"])},
+          "ws":[ws],
+          "friends": []
+        }
+        dbo.collection("users").insertOne({
+          "uid":uid,
+          "friends": [],
+          "keys":{"enc":message["keys"]["enc"],"sign":message["keys"]["sign"]}
+        }, function(err, res) {
+          if (err) throw err;
+          console.log("user "+uid+" inserted");
+        });
+        console.log("users["+uid+"]="+users[uid])
+        ws["uid"] = uid;
+        ws["verified"] = false;
+        ws["randomMsg"] = randomMsgOrig;
+        break;
       }
-      return;
+      case "randomMsg":{
+        console.log(message["randomMsg"],ws["randomMsg"])
+        if(message["randomMsg"] == ws["randomMsg"]){
+          ws["verified"] = true;
+          ws.send(JSON.stringify({"type":"succsess","succsess":true}));
+        }
+        else
+          ws.send(JSON.stringify({"type":"succsess","succsess":false}));
+        break;
+      }
+      case "login":{
+        console.log("login");
+        message["uid"] = parseInt(message["uid"],32);
+        if(users[message["uid"]] != null && users[message["uid"]]["keys"]["enc"] && users[message["uid"]]["keys"]["sign"]){
+          ws["verified"] = false;
+          message["uid"] = parseInt(message["uid"]);
+          console.log("uid:",message["uid"]);
+          users[message["uid"]]["ws"].push(ws);
+          let randomMsgOrig = randomStr(32);
+          ws["randomMsg"] = randomMsgOrig;
+          ws["uid"] = message["uid"];
+  
+          let randomMsg = await encryptData(users[message["uid"]]["keys"]["enc"], randomMsgOrig);
+          function arrayBufferToBase64( buffer ) {
+            var binary = '';
+            var bytes = new Uint8Array( buffer );
+            var len = bytes.byteLength;
+            for (var i = 0; i < len; i++) {
+                binary += String.fromCharCode( bytes[ i ] );
+            }
+            return btoa( binary );
+          }
+          //console.log("to",arrayBufferToBase64(randomMsg));
+          const ok = ws.send(JSON.stringify({"type":"uid","uid":ws["uid"].toString(32),"rS":arrayBufferToBase64(randomMsg)}));
+        }else{
+          ws.send(JSON.stringify({"type":"error","code":"no uid","msg":"No keys on the server for that uid!<br>This means that your account is not present on the Server and you have to make a new one."}));
+        }
+        break;
+      }
+      case "deleteMe":{
+        if(message["sure"] === "yes"){
+          delete users[ws["uid"]];
+          dbo.collection("users").deleteOne({ "uid": ws["uid"] }, function(err, obj) {
+            if (err) throw err;
+            console.log("User "+ws["uid"]+" deleted");
+          });
+        }
+        break;
+      }
+      case "addFriend":{
+        if(message["uid"] != null){
+          ws["friends"].push(message["uid"]);
+          if(users[message["uid"]].name){
+            let name = users[message["uid"]].name;
+            ws.send(JSON.stringify({"type":"whois","uid":message["uid"],"name":name}))
+          }
+        }
+        break;
+      }
+      case "changeName":{
+        ws["name"] = sanitizeHtml(message["name"], {allowedTags: [],allowedAttributes: {}});
+        users[ws["uid"]]["ws"].forEach((websock)=>websock.send(JSON.stringify({"type":"changeName","name":message["name"]})));
+        break;
+      }
+      default:console.log(message);
     }
-    console.log(message)
   }
   //const ok = ws.send(message.slice(5), isBinary);
 },

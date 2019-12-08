@@ -220,7 +220,7 @@ window.onload = ()=>{
   if(dmName != "allChat"){
     document.getElementsByTagName('span')[0].innerText = "☰ "+((dmName==="allChat")?"Cool Chat":dmName);
   }
-  let nicknames=[];
+  let nicknames=[localStorage.getItem("name") || "me"];
   let isSubscribed = false;
   let swRegistration = null;
   const applicationServerPublicKey = 'BM_12EMi2xCAVhD2tn_gr3DugdW_bYnxtVCJd1qzAZTag5gi-IH97Vetc5sYfr155JiPGceLMVMXy29GmFCES20';
@@ -577,12 +577,18 @@ window.onload = ()=>{
           window.ws.send(JSON.stringify({"type":"randomMsg","randomMsg":arrayBufferToText(randomMessage)}));
         }else if(msg["type"] === "succsess"){
           if (msg["succsess"]) {
+            contactsSearch.onchange();
             localStorage.setItem("uid",ws.uid);
             $('#message').val('').focus();
             document.getElementById('message').disabled = false;
             document.getElementById('imagefile').disabled = false;
             return $('#chat').addClass('nickname-set');
           } $('#nickname-err').css('visibility', 'visible');
+        }else if(msg["type"] === "changeName"){
+          nicknames = nicknames.filter(e=>e != localStorage.getItem("name"));
+          localStorage.setItem("name",msg["name"]);
+          nicknames.push(msg["name"]);
+          contactsSearch.onchange();
         }
     };
     window.ws.onerror = window.ws.onclose = ()=>{
@@ -633,7 +639,21 @@ window.onload = ()=>{
         setTimeout(()=>umenu.style.transition = "top 0s ease-in-out",500);
         umenu.innerHTML= '<p>'+nickName+'</p><p>' + localStorage.getItem('signKeyP') + '</p>'+
                   '<p>' + localStorage.getItem('encryptKeyP') + '</p>';
-        umenu.onclick = ()=>{
+        umenu.innerHTML+= `<form action="#" class="wrap" id="change-nickname">
+        <label for="changeNickname" style="color: #00b5d6;">Please type in your nickname and press enter.</label>
+        <input id="changeNickname" aria-label="`+nickName+`" type="text" placeholder="`+nickName+`" autocomplete="off" onclick=""/>
+        <input type="submit" id="changeNick" value="change" margin = "10px">
+        </form>`
+        document.getElementById("changeNick").onclick = async function () {
+          window.ws.send(JSON.stringify({"type":"changeName","name":$('#changeNickname').val()}))
+          const umenu = document.getElementById("umenu");
+          umenu.style.transition = "top 0.3s ease-in-out";
+          umenu.style.top = '-200vh';
+          setTimeout(()=>umenu.style.transition = "top 0s ease-in-out",500);
+        }
+        umenu.onclick = (e)=>{
+          if(e.target !== document.getElementById("umenu"))
+            return false;
           const umenu = document.getElementById("umenu");
           umenu.style.transition = "top 0.3s ease-in-out";
           umenu.style.top = '-200vh';
@@ -645,13 +665,13 @@ window.onload = ()=>{
         umenu.style.transition = "top 0.3s ease-in-out";
         umenu.style.top = '2.5vh';
         setTimeout(()=>umenu.style.transition = "top 0s ease-in-out",500);
-        umenu.innerHTML= '<p>'+nickName+'</p><p>' + publicKeys[nickName].signS + '</p><p>' + publicKeys[nickName].encryptS + '</p>';
         umenu.onclick = ()=>{
           const umenu = document.getElementById("umenu");
           umenu.style.transition = "top 0.3s ease-in-out";
           umenu.style.top = '-200vh';
           setTimeout(()=>umenu.style.transition = "top 0s ease-in-out",500);
         };
+        umenu.innerHTML= '<p>'+nickName+'</p><p>' + publicKeys[nickName].signS + '</p><p>' + publicKeys[nickName].encryptS + '</p>';
         return false;
       }
       cycleNavBar()
@@ -837,7 +857,7 @@ window.onload = ()=>{
             $('#nicknames').append($((nicks[i].target===localStorage.getItem('name'))?'<b style="background: coral">':'<b>').text(nicks[i].target));
             $('#nicknames').append($('<b>').text());
         }
-        return ws.send(JSON.stringify({"type":"userSearch","search":contactsSearch.value}));
+        return ws.send(JSON.stringify({"type":"whois","search":contactsSearch.value}));
     }
     $('#nicknames').empty().append($('<span>Online: </span>'));
     $('#nicknames').append($('<b>').text("allChat"));
@@ -849,6 +869,19 @@ window.onload = ()=>{
   //
   // dom manipulation code
   //
+  document.getElementById('DeleteMe').onclick = ()=>{
+    if(document.getElementById('DeleteMe').innerHTML === "Delete my user"){
+      window.ws.send(JSON.stringify({"type":"deleteMe","sure":"no"}));
+      document.getElementById('DeleteMe').innerHTML = "Are you sure you want to delete your user?";
+    }
+    else if(document.getElementById('DeleteMe').innerHTML === "Are you sure you want to delete your user?"){
+      window.ws.send(JSON.stringify({"type":"deleteMe","sure":"yes"}));
+      document.getElementById('DeleteMe').innerHTML = "Deleting...";
+      localStorage.clear();
+      location.reload();
+    }
+  }
+
     document.getElementById('register').onclick = async function () {
       document.getElementById('register').disabled = true;
       const passwd = $('#passwd').val();
