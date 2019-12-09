@@ -227,9 +227,15 @@ message: async (ws, message, isBinary) => {
         }
         break;
       }
+      case "myFriends":{
+        ws.send(JSON.stringify({"type":"friends","friends":users[ws["uid"]]["friends"]}))
+        break;
+      }
       case "addFriend":{
+        console.log(users[ws["uid"]]["friends"]);
         if(message["uid"] != null){
-          ws["friends"].push(message["uid"]);
+          users[ws["uid"]]["friends"].push(message["uid"]);
+          console.log(users[ws["uid"]]["friends"]);
           if(users[message["uid"]].name){
             let name = users[message["uid"]].name;
             ws.send(JSON.stringify({"type":"whois","uid":message["uid"],"name":name}))

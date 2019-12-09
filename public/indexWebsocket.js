@@ -221,6 +221,8 @@ window.onload = ()=>{
     document.getElementsByTagName('span')[0].innerText = "☰ "+((dmName==="allChat")?"Cool Chat":dmName);
   }
   let nicknames=[localStorage.getItem("name") || "me"];
+  let names = {/*ID:name */};
+  let ids = {/*name:ID */};
   let isSubscribed = false;
   let swRegistration = null;
   const applicationServerPublicKey = 'BM_12EMi2xCAVhD2tn_gr3DugdW_bYnxtVCJd1qzAZTag5gi-IH97Vetc5sYfr155JiPGceLMVMXy29GmFCES20';
@@ -542,7 +544,11 @@ window.onload = ()=>{
             dm(msg.from,msg.msg,msg.uuid);
             break;
           }case "whois":{
+            names[msg["uid"]] = msg["name"];
+            ids[msg["name"]] = msg["uid"];
             users[msg["uid"]] = msg["name"];
+            if(msg["name"] && !nicknames.includes(msg["name"]))
+              nicknames.push(msg["name"])
             break;
           }case "error":{
             console.error(msg["msg"]);
@@ -593,6 +599,9 @@ window.onload = ()=>{
             localStorage.setItem("name",msg["name"]);
             nicknames.push(msg["name"]);
             contactsSearch.onchange();
+            break;
+          }case "friends":{
+            nicknames.push(msg["friends"]);
             break;
           }default:
             console.log("Message from Server:",msg);
