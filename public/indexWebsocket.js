@@ -505,10 +505,10 @@ window.onload = ()=>{
   detectswipe('mySidenav',(el,d)=>(d==='l')?cycleNavBar():false);
 
 
-
-  let reconnecting = false;
   const wsConnect = ()=>{
-    reconnecting = false;
+    if(!navigator.onLine){
+      window.setTimeout(wsConnect,500);
+    }
     if(location.href === "http://localhost:8000/"){
       window.ws = new WebSocket("ws://localhost:8000/index.html");
     }
@@ -537,71 +537,80 @@ window.onload = ()=>{
         console.log(message);
         let msg = JSON.parse(message.data);
         console.log(msg);
-        if(msg["type"]==="dm"){
-          return dm(msg.from,msg.msg,msg.uuid);
-        }
-        if(msg["type"]==="whois"){
-          users[msg["uid"]] = msg["name"];
-        }
-        if(msg["type"]==="error"){
-          console.error(msg["msg"]);
-          $('#chat').removeClass('nickname-set');
-          document.getElementById('register').disabled = false;
-          $('#nickname-err').css('visibility', 'visible');
-          document.getElementById('nickname-err').innerHTML = msg["msg"];
-          if(msg["code"] === "no uid"){
-            localStorage.removeItem("uid");
-          }
-        }
-        if(msg["type"]==="uid"){
-          let uid = parseInt(msg["uid"],32);
-          function base64StringToArrayBuffer(b64str) {
-            var byteStr = atob(b64str)
-            var bytes = new Uint8Array(byteStr.length)
-            for (var i = 0; i < byteStr.length; i++) {
-              bytes[i] = byteStr.charCodeAt(i)
+        switch (msg["type"]) {
+          case "dm":{
+            dm(msg.from,msg.msg,msg.uuid);
+            break;
+          }case "whois":{
+            users[msg["uid"]] = msg["name"];
+            break;
+          }case "error":{
+            console.error(msg["msg"]);
+            $('#chat').removeClass('nickname-set');
+            document.getElementById('register').disabled = false;
+            $('#nickname-err').css('visibility', 'visible');
+            document.getElementById('nickname-err').innerHTML = msg["msg"];
+            if(msg["code"] === "no uid"){
+              localStorage.removeItem("uid");
             }
-            return bytes.buffer
+            break;
           }
-          let FromBase64 = function (str) {
-              return new Uint8Array(atob(str).split('').map(function (c) { return c.charCodeAt(0); }));
-          }
-          console.log("from",FromBase64(msg["rS"]));
-          let privateKey = await importPrivateDecryptKey(localStorage.getItem("encryptKeyS"));
-          let randomMessage = await decryptData(privateKey,FromBase64(msg["rS"]));
-          console.log(uid);
-          window.ws.uid = uid;
-          users[uid] = "me";
-          console.log(randomMessage);
-          console.log(arrayBufferToText(randomMessage));
-          window.ws.send(JSON.stringify({"type":"randomMsg","randomMsg":arrayBufferToText(randomMessage)}));
-        }else if(msg["type"] === "succsess"){
-          if (msg["succsess"]) {
+          case "uid":{
+            let uid = parseInt(msg["uid"],32);
+            function base64StringToArrayBuffer(b64str) {
+              var byteStr = atob(b64str)
+              var bytes = new Uint8Array(byteStr.length)
+              for (var i = 0; i < byteStr.length; i++) {
+                bytes[i] = byteStr.charCodeAt(i)
+              }
+              return bytes.buffer
+            }
+            let FromBase64 = function (str) {
+                return new Uint8Array(atob(str).split('').map(function (c) { return c.charCodeAt(0); }));
+            }
+            console.log("from",FromBase64(msg["rS"]));
+            let privateKey = await importPrivateDecryptKey(localStorage.getItem("encryptKeyS"));
+            let randomMessage = await decryptData(privateKey,FromBase64(msg["rS"]));
+            console.log(uid);
+            window.ws.uid = uid;
+            users[uid] = "me";
+            console.log(randomMessage);
+            console.log(arrayBufferToText(randomMessage));
+            window.ws.send(JSON.stringify({"type":"randomMsg","randomMsg":arrayBufferToText(randomMessage)}));
+            break;
+          }case "succsess":{
+            if (msg["succsess"]) {
+              contactsSearch.onchange();
+              localStorage.setItem("uid",ws.uid);
+              $('#message').val('').focus();
+              document.getElementById('message').disabled = false;
+              document.getElementById('imagefile').disabled = false;
+              return $('#chat').addClass('nickname-set');
+            } $('#nickname-err').css('visibility', 'visible');
+            break;
+          }case "changeName":{
+            nicknames = nicknames.filter(e=>e != localStorage.getItem("name"));
+            localStorage.setItem("name",msg["name"]);
+            nicknames.push(msg["name"]);
             contactsSearch.onchange();
-            localStorage.setItem("uid",ws.uid);
-            $('#message').val('').focus();
-            document.getElementById('message').disabled = false;
-            document.getElementById('imagefile').disabled = false;
-            return $('#chat').addClass('nickname-set');
-          } $('#nickname-err').css('visibility', 'visible');
-        }else if(msg["type"] === "changeName"){
-          nicknames = nicknames.filter(e=>e != localStorage.getItem("name"));
-          localStorage.setItem("name",msg["name"]);
-          nicknames.push(msg["name"]);
-          contactsSearch.onchange();
+            break;
+          }default:
+            console.log("Message from Server:",msg);
+            break;
         }
     };
-    window.ws.onerror = window.ws.onclose = ()=>{
+    window.ws.onclose = ()=>{
         $('#chat').removeClass('connected');
         document.getElementById('message').disabled = true;
         document.getElementById('imagefile').disabled = true;
         document.getElementById('register').disabled = true;
-        if(reconnecting)
-          return console.log("already reconnecting!");
-        reconnecting = true;
         console.log("reconnect");
-        window.setTimeout(wsConnect,5000);
+        window.setTimeout(wsConnect,500);
     }
+    window.ws.onerror = (e)=>{
+      console.error(e.message);
+      window.ws.close();
+  }
   };
   wsConnect();
 
