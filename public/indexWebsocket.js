@@ -560,8 +560,7 @@ window.onload = ()=>{
               localStorage.removeItem("uid");
             }
             break;
-          }
-          case "uid":{
+          }case "uid":{
             let uid = parseInt(msg["uid"],32);
             function base64StringToArrayBuffer(b64str) {
               var byteStr = atob(b64str)
@@ -586,7 +585,7 @@ window.onload = ()=>{
             break;
           }case "succsess":{
             if (msg["succsess"]) {
-              contactsSearch.onchange();
+              refreshNicks();
               localStorage.setItem("uid",ws.uid);
               $('#message').val('').focus();
               document.getElementById('message').disabled = false;
@@ -594,11 +593,20 @@ window.onload = ()=>{
               return $('#chat').addClass('nickname-set');
             } $('#nickname-err').css('visibility', 'visible');
             break;
+          }case "search":{
+            if(msg["name"])
+              nicknames.push(msg["name"]);
+            else
+              nicknames.push(msg["uid"]);
+            const nickSet = new Set(nicknames);
+            nicknames = [...nickSet];
+            refreshNicks();
+            break;
           }case "changeName":{
             nicknames = nicknames.filter(e=>e != localStorage.getItem("name"));
             localStorage.setItem("name",msg["name"]);
             nicknames.push(msg["name"]);
-            contactsSearch.onchange();
+            refreshNicks();
             break;
           }case "friends":{
             nicknames.push(msg["friends"]);
@@ -860,6 +868,7 @@ window.onload = ()=>{
   }
 
   function addFriend (friend){
+    window.ws.send(JSON.stringify({"type":"addFriend","uid":friend}));
     let friends = new Set(JSON.parse(localStorage.getItem('friends')));
     friends.add(friend);
     localStorage.setItem('friends', JSON.stringify([...friends]));
@@ -867,15 +876,9 @@ window.onload = ()=>{
 
   contactsSearch.onchange = contactsSearch.onkeyup = contactsSearch.onclick = ()=>{
     if(contactsSearch.value != ""){
-        let nicks = fuzzysort.go(contactsSearch.value,Object.values(nicknames),{threshold: -999});
-        $('#nicknames').empty().append($('<span>Online: </span>'));
-        $('#nicknames').append($('<b>').text("allChat"));
-        //var nicknames = document.getElementsByClassName("nicknames");
-        for (var i in nicks) {
-            $('#nicknames').append($((nicks[i].target===localStorage.getItem('name'))?'<b style="background: coral">':'<b>').text(nicks[i].target));
-            $('#nicknames').append($('<b>').text());
-        }
-        return ws.send(JSON.stringify({"type":"whois","search":contactsSearch.value}));
+        console.log(nicknames);
+        refreshNicks();
+        return ws.send(JSON.stringify({"type":"userSearch","search":contactsSearch.value}));
     }
     $('#nicknames').empty().append($('<span>Online: </span>'));
     $('#nicknames').append($('<b>').text("allChat"));
@@ -884,6 +887,27 @@ window.onload = ()=>{
         $('#nicknames').append($((nicknames[i]===localStorage.getItem('name'))?'<b style="background: coral">':'<b>').text(nicknames[i]));
     }
   };
+  function refreshNicks() {
+    if(contactsSearch.value != ""){
+      console.log(nicknames);
+      let nicks = fuzzysort.go(contactsSearch.value,Object.values(nicknames),{threshold: -999});
+      $('#nicknames').empty().append($('<span>Online: </span>'));
+      $('#nicknames').append($('<b>').text("allChat"));
+      //var nicknames = document.getElementsByClassName("nicknames");
+      for (var i in nicks) {
+          $('#nicknames').append($((nicks[i].target===localStorage.getItem('name'))?'<b style="background: coral">':'<b>').text(nicks[i].target));
+          $('#nicknames').append($('<b>').text());
+      }
+      return;
+    }
+    $('#nicknames').empty().append($('<span>Online: </span>'));
+    $('#nicknames').append($('<b>').text("allChat"));
+    //var nicknames = document.getElementsByClassName("nicknames");
+    for (var i in nicknames) {
+        $('#nicknames').append($((nicknames[i]===localStorage.getItem('name'))?'<b style="background: coral">':'<b>').text(nicknames[i]));
+    }
+  }
+
   //
   // dom manipulation code
   //

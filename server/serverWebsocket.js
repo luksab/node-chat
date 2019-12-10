@@ -135,8 +135,15 @@ message: async (ws, message, isBinary) => {
         break;
       }
       case "userSearch":{
+        if(!isNaN(message["search"])){
+          message["search"] = parseInt(message["search"]);
+        }
+        console.log(users[message["search"]]);
         if(users[message["search"]] && users[message["search"]]["name"]){
-          ws.send(JSON.stringify({"userName":users[message["search"]]["name"]}));
+          ws.send(JSON.stringify({"type":"search","uid":message["search"].toString(),"name":users[message["search"]]["name"]}));
+        }
+        else if(users[message["search"]]){
+          ws.send(JSON.stringify({"type":"search","uid":message["search"].toString()}));
         }
         break;
       }
