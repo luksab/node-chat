@@ -127,7 +127,7 @@ message: async (ws, message, isBinary) => {
         break;
       }
       case "whois":{
-        console.log("message=",message);
+        console.log("message=",message,users[message["uid"]]);
         if(users[message["uid"]] && users[message["uid"]].name){
           let name = users[message["uid"]].name;
           ws.send(JSON.stringify({"type":"whois","uid":message["uid"],"name":name}))
@@ -242,6 +242,11 @@ message: async (ws, message, isBinary) => {
         console.log(users[ws["uid"]]["friends"]);
         if(message["uid"] != null){
           users[ws["uid"]]["friends"].push(message["uid"]);
+          const friendsSet = new Set(users[ws["uid"]]["friends"]);
+          users[ws["uid"]]["friends"] = [...friendsSet];
+          dbo.collection("users").updateOne({"uid":ws["uid"]},{$set:{"friends":users[ws["uid"]]["friends"]}}, function(err, res) {
+            if (err) throw err;
+          });
           console.log(users[ws["uid"]]["friends"]);
           if(users[message["uid"]].name){
             let name = users[message["uid"]].name;
@@ -252,6 +257,10 @@ message: async (ws, message, isBinary) => {
       }
       case "changeName":{
         ws["name"] = sanitizeHtml(message["name"], {allowedTags: [],allowedAttributes: {}});
+        users[ws["uid"]]["name"] = message["name"];
+        dbo.collection("users").updateOne({"uid":ws["uid"]},{$set:{"name":message["name"]}}, function(err, res) {
+          if (err) throw err;
+        });
         users[ws["uid"]]["ws"].forEach((websock)=>websock.send(JSON.stringify({"type":"changeName","name":message["name"]})));
         break;
       }

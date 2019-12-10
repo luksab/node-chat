@@ -544,6 +544,7 @@ window.onload = ()=>{
             dm(msg.from,msg.msg,msg.uuid);
             break;
           }case "whois":{
+            console.log(msg["name"]);
             names[msg["uid"]] = msg["name"];
             ids[msg["name"]] = msg["uid"];
             users[msg["uid"]] = msg["name"];
@@ -585,6 +586,7 @@ window.onload = ()=>{
             break;
           }case "succsess":{
             if (msg["succsess"]) {
+              window.ws.send(JSON.stringify({"type":"myFriends"}));
               refreshNicks();
               localStorage.setItem("uid",ws.uid);
               $('#message').val('').focus();
@@ -609,7 +611,12 @@ window.onload = ()=>{
             refreshNicks();
             break;
           }case "friends":{
-            nicknames.push(msg["friends"]);
+            if(msg["friends"] != [])
+              nicknames.push(...msg["friends"]);
+            const nickSet = new Set(nicknames);
+            nicknames = [...nickSet];
+            refreshNicks();
+            msg["friends"].forEach((uid)=>window.ws.send(JSON.stringify({"type":"whois","uid":parseInt(uid)})));
             break;
           }default:
             console.log("Message from Server:",msg);
@@ -703,7 +710,7 @@ window.onload = ()=>{
       cycleNavBar()
       dmName = nickName;
       if(dmName !== "allChat")
-        socket.emit("getKey",dmName);
+        window.ws.send(JSON.stringify({"type":"getKey","uid":dmName}));
       document.getElementsByTagName('span')[1].innerText = "☰ "+((dmName==="allChat")?"Cool Chat":dmName);
       lines.innerHTML = '';
       if(!MessageFromDB(dmName) && dms[dmName] != null)
@@ -888,6 +895,7 @@ window.onload = ()=>{
     }
   };
   function refreshNicks() {
+    console.log(names);
     if(contactsSearch.value != ""){
       console.log(nicknames);
       let nicks = fuzzysort.go(contactsSearch.value,Object.values(nicknames),{threshold: -999});
@@ -895,7 +903,8 @@ window.onload = ()=>{
       $('#nicknames').append($('<b>').text("allChat"));
       //var nicknames = document.getElementsByClassName("nicknames");
       for (var i in nicks) {
-          $('#nicknames').append($((nicks[i].target===localStorage.getItem('name'))?'<b style="background: coral">':'<b>').text(nicks[i].target));
+          $('#nicknames').append($((nicks[i].target===localStorage.getItem('name'))?
+            '<b style="background: coral">':'<b>').text(Object.keys(names).includes(nicks[i].target)?names[nicks[i].target]:nicks[i].target));
           $('#nicknames').append($('<b>').text());
       }
       return;
@@ -904,7 +913,9 @@ window.onload = ()=>{
     $('#nicknames').append($('<b>').text("allChat"));
     //var nicknames = document.getElementsByClassName("nicknames");
     for (var i in nicknames) {
-        $('#nicknames').append($((nicknames[i]===localStorage.getItem('name'))?'<b style="background: coral">':'<b>').text(nicknames[i]));
+      $('#nicknames').append($((nicknames[i].target===localStorage.getItem('name'))?
+      '<b style="background: coral">':'<b>').text(Object.keys(names).includes(nicknames[i].target)?names[nicknames[i].target]:nicknames[i].target));
+    $('#nicknames').append($('<b>').text());
     }
   }
 
