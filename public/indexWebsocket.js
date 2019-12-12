@@ -544,10 +544,14 @@ window.onload = ()=>{
             dm(msg.from,msg.msg,msg.uuid);
             break;
           }case "whois":{
-            console.log(msg["name"]);
-            names[msg["uid"]] = msg["name"];
-            ids[msg["name"]] = msg["uid"];
-            users[msg["uid"]] = msg["name"];
+            console.log("name",msg["name"]);
+            ids[msg["name"]] = false;
+            users[msg["uid"]] = {"uid":msg["uid"]};
+            if(msg["name"]){
+              names[msg["uid"]] = msg["name"];
+              ids[msg["name"]] = msg["uid"];
+              users[msg["uid"]] = {"uid":msg["uid"],"name":msg["name"]};
+            }
             if(msg["name"] && !nicknames.includes(msg["name"]))
               nicknames.push(msg["name"])
             break;
@@ -579,7 +583,7 @@ window.onload = ()=>{
             let randomMessage = await decryptData(privateKey,FromBase64(msg["rS"]));
             console.log(uid);
             window.ws.uid = uid;
-            users[uid] = "me";
+            users[uid] = {"uid":uid,"name":"me"};
             console.log(randomMessage);
             console.log(arrayBufferToText(randomMessage));
             window.ws.send(JSON.stringify({"type":"randomMsg","randomMsg":arrayBufferToText(randomMessage)}));
@@ -604,7 +608,11 @@ window.onload = ()=>{
             nicknames = [...nickSet];
             refreshNicks();
             break;
+          }case "key":{
+            publicKeys[msg["uid"]] = msg["keys"];
+            break;
           }case "changeName":{
+            users[ws.uid]["name"] = msg["name"];
             nicknames = nicknames.filter(e=>e != localStorage.getItem("name"));
             localStorage.setItem("name",msg["name"]);
             nicknames.push(msg["name"]);
@@ -773,11 +781,16 @@ window.onload = ()=>{
     catch(e){console.error(e)}
   }
   
-  let users = {};
+  let users = {/*
+    "ID1":{
+      "keys":{"encrypt":"Key1","sign":"Key2"},
+      "name": "[name]"
+    }
+    ,"ID2":{}*/}
 
   function dm (from, msg, uuid, encrypted=false, chat=false) {
     console.log(users);
-    from = users[from] || from;
+    from = users[from]["name"] || from;
     console.log(uuid)
     chat = chat?from:chat;
     console.log(chat)
@@ -895,6 +908,7 @@ window.onload = ()=>{
     }
   };
   function refreshNicks() {
+    rebuildNicknames();
     console.log(names);
     if(contactsSearch.value != ""){
       console.log(nicknames);
@@ -916,6 +930,13 @@ window.onload = ()=>{
       $('#nicknames').append($((nicknames[i].target===localStorage.getItem('name'))?
       '<b style="background: coral">':'<b>').text(Object.keys(names).includes(nicknames[i].target)?names[nicknames[i].target]:nicknames[i].target));
     $('#nicknames').append($('<b>').text());
+    }
+  }
+  function rebuildNicknames(){
+    nicknames=[localStorage.getItem("name") || "me"];
+    for(let user in users) {
+      user = users[user];
+      nicknames.push(user.name) || nicknames.push(user.uid.toString());
     }
   }
 

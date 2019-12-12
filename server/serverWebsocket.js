@@ -130,8 +130,17 @@ message: async (ws, message, isBinary) => {
         console.log("message=",message,users[message["uid"]]);
         if(users[message["uid"]] && users[message["uid"]].name){
           let name = users[message["uid"]].name;
-          ws.send(JSON.stringify({"type":"whois","uid":message["uid"],"name":name}))
+          ws.send(JSON.stringify({"type":"whois","uid":message["uid"].toString(),"name":name}));
+        }else{
+          ws.send(JSON.stringify({"type":"whois","uid":message["uid"].toString(),"name":false}));
         }
+        break;
+      }case "getKey":{
+        keys = users[message["uid"]].keys;
+        console.log(keys);
+        console.log(await exportPublicKey(keys.enc));
+        console.log(await exportPublicKey(keys.sign));
+        ws.send(JSON.stringify({"type":"key","uid":message["uid"],"keys":{"encryptS":await exportPublicKey(keys.enc),"signS":await exportPublicKey(keys.sign)}}));
         break;
       }
       case "userSearch":{
@@ -241,6 +250,7 @@ message: async (ws, message, isBinary) => {
       case "addFriend":{
         console.log(users[ws["uid"]]["friends"]);
         if(message["uid"] != null){
+          message["uid"] = parseInt(message["uid"]);
           users[ws["uid"]]["friends"].push(message["uid"]);
           const friendsSet = new Set(users[ws["uid"]]["friends"]);
           users[ws["uid"]]["friends"] = [...friendsSet];
@@ -358,6 +368,39 @@ var encryptAlgorithm = {
   hash: {
     name: "SHA-256"
   }
+}
+
+function convertBinaryToPem(binaryData, label) {
+  var base64Cert = arrayBufferToBase64String(binaryData)
+  var pemCert = "-----BEGIN " + label + "-----\r\n"
+  var nextIndex = 0
+  var lineLength
+  while (nextIndex < base64Cert.length) {
+    if (nextIndex + 64 <= base64Cert.length) {
+      pemCert += base64Cert.substr(nextIndex, 64) + "\r\n"
+    } else {
+      pemCert += base64Cert.substr(nextIndex) + "\r\n"
+    }
+    nextIndex += 64
+  }
+  pemCert += "-----END " + label + "-----\r\n"
+  return pemCert
+}
+function arrayBufferToBase64String(arrayBuffer) {
+  var byteArray = new Uint8Array(arrayBuffer)
+  var byteString = ''
+  for (var i=0; i<byteArray.byteLength; i++) {
+    byteString += String.fromCharCode(byteArray[i])
+  }
+  return btoa(byteString)
+}
+function exportPublicKey(key) {
+  return new Promise(function(resolve) {
+    crypto.subtle.exportKey('spki', key).
+    then(function(spki) {
+      resolve(convertBinaryToPem(spki, "RSA PUBLIC KEY"))
+    })
+  })
 }
 
 function importPublicEncryptKey(pemKey) {
