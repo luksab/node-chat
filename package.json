@@ -1,0 +1,25 @@
+{
+  "name": "chat",
+  "version": "1.0.0",
+  "description": "A websocket chat app",
+  "main": "server/serverWebsocket.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/luksab/node-chat.git"
+  },
+  "author": "luksab",
+  "bugs": {
+    "url": "https://github.com/luksab/node-chat/issues"
+  },
+  "homepage": "https://github.com/luksab/node-chat#readme",
+  "dependencies": {
+    "mongodb": "^3.4.0",
+    "node-webcrypto-ossl": "^1.0.48",
+    "sanitize-html": "^1.20.1",
+    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v16.4.0",
+    "web-push": "^3.4.3"
+  }
+}

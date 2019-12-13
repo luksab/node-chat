@@ -31,14 +31,16 @@ MongoClient.connect(url,{
   dbo = db.db("Chat");
   dbo.collection("variables").findOne({"name":"randomState"},function(err, result) {
     if (err) throw err;
-    if(result != null)
+    if(result == null)
+      dbo.collection("variables").insertOne({"name":"randomState","randomState":1});
+    else
       randomState = result.randomState;
     //db.close();
   });
   dbo.collection("users").find({}).toArray(async function(err, result) {
     if (err) throw err;
     for(user of result){
-      users[user["uid"]] = {
+      users[user["_id"]] = {
         "keys":{"enc":await importPublicEncryptKey(user["keys"]["enc"]),"sign":await importPublicEncryptKey(user["keys"]["sign"])},
         "ws":[],
         "friends": user["friends"]
@@ -48,7 +50,7 @@ MongoClient.connect(url,{
     //db.close();
   });
 });
-fs.readFile('/home/lukas/node/node-chat/public/websocket/index.html', function (err, data) {
+fs.readFile('./public/websocket/index.html', function (err, data) {
   if (err) {
       global["index"] = `Error getting the file: ${err}.`;
   } else {
@@ -58,7 +60,7 @@ fs.readFile('/home/lukas/node/node-chat/public/websocket/index.html', function (
 });
 
 setInterval(() => {
-  fs.readFile('/home/lukas/node/node-chat/public/websocket/index.html', function (err, data) {
+  fs.readFile('./public/websocket/index.html', function (err, data) {
     if (err) {
         global["index"] = `Error getting the file: ${err}.`;
     } else {
@@ -181,7 +183,7 @@ message: async (ws, message, isBinary) => {
           "friends": []
         }
         dbo.collection("users").insertOne({
-          "uid":uid,
+          "_id":uid,
           "friends": [],
           "keys":{"enc":message["keys"]["enc"],"sign":message["keys"]["sign"]}
         }, function(err, res) {
@@ -236,7 +238,7 @@ message: async (ws, message, isBinary) => {
       case "deleteMe":{
         if(message["sure"] === "yes"){
           delete users[ws["uid"]];
-          dbo.collection("users").deleteOne({ "uid": ws["uid"] }, function(err, obj) {
+          dbo.collection("users").deleteOne({ "_id": ws["uid"] }, function(err, obj) {
             if (err) throw err;
             console.log("User "+ws["uid"]+" deleted");
           });
@@ -254,7 +256,7 @@ message: async (ws, message, isBinary) => {
           users[ws["uid"]]["friends"].push(message["uid"]);
           const friendsSet = new Set(users[ws["uid"]]["friends"]);
           users[ws["uid"]]["friends"] = [...friendsSet];
-          dbo.collection("users").updateOne({"uid":ws["uid"]},{$set:{"friends":users[ws["uid"]]["friends"]}}, function(err, res) {
+          dbo.collection("users").updateOne({"_id":ws["uid"]},{$set:{"friends":users[ws["uid"]]["friends"]}}, function(err, res) {
             if (err) throw err;
           });
           console.log(users[ws["uid"]]["friends"]);
@@ -268,7 +270,7 @@ message: async (ws, message, isBinary) => {
       case "changeName":{
         ws["name"] = sanitizeHtml(message["name"], {allowedTags: [],allowedAttributes: {}});
         users[ws["uid"]]["name"] = message["name"];
-        dbo.collection("users").updateOne({"uid":ws["uid"]},{$set:{"name":message["name"]}}, function(err, res) {
+        dbo.collection("users").updateOne({"_id":ws["uid"]},{$set:{"name":message["name"]}}, function(err, res) {
           if (err) throw err;
         });
         users[ws["uid"]]["ws"].forEach((websock)=>websock.send(JSON.stringify({"type":"changeName","name":message["name"]})));
@@ -293,9 +295,9 @@ close: (ws, code, message) => {
 }
 }).any('/*', (res, req) => {
   if(req.getUrl() == "/")
-    data = fs.readFileSync('/home/lukas/node/node-chat/public/websocket/index.html');
+    data = fs.readFileSync('./public/websocket/index.html');
   else
-    data = fs.readFileSync('/home/lukas/node/node-chat/public'+req.getUrl());
+    data = fs.readFileSync('./public'+req.getUrl());
   res.end(data);
   //res.end(global["index"]);
 }).listen(8000, (token) => {
