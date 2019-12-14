@@ -220,7 +220,7 @@ window.onload = ()=>{
   if(dmName != "allChat"){
     document.getElementsByTagName('span')[0].innerText = "☰ "+((dmName==="allChat")?"Cool Chat":dmName);
   }
-  let nicknames=[localStorage.getItem("name") || "me"];
+  let nicknames=[];
   let names = {/*ID:name */};
   let ids = {/*name:ID */};
   let isSubscribed = false;
@@ -933,7 +933,7 @@ window.onload = ()=>{
     }
   }
   function rebuildNicknames(){
-    nicknames=[localStorage.getItem("name") || "me"];
+    nicknames=[];
     for(let user in users) {
       user = users[user];
       nicknames.push(user.name) || nicknames.push(user.uid.toString());
