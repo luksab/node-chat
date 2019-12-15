@@ -909,7 +909,7 @@ window.onload = ()=>{
   };
   function refreshNicks() {
     rebuildNicknames();
-    console.log(names);
+    console.log("refreshNicks",names);
     if(contactsSearch.value != ""){
       console.log(nicknames);
       let nicks = fuzzysort.go(contactsSearch.value,Object.values(nicknames),{threshold: -999});
@@ -927,9 +927,8 @@ window.onload = ()=>{
     $('#nicknames').append($('<b>').text("allChat"));
     //var nicknames = document.getElementsByClassName("nicknames");
     for (var i in nicknames) {
-      $('#nicknames').append($((nicknames[i].target===localStorage.getItem('name'))?
-      '<b style="background: coral">':'<b>').text(Object.keys(names).includes(nicknames[i].target)?names[nicknames[i].target]:nicknames[i].target));
-    $('#nicknames').append($('<b>').text());
+      $('#nicknames').append($((nicknames[i]===localStorage.getItem('name'))?
+      '<b style="background: coral">':'<b>').text(Object.keys(names).includes(nicknames[i])?names[nicknames[i]]:nicknames[i]));
     }
   }
   function rebuildNicknames(){
