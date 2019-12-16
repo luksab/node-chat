@@ -1,4 +1,14 @@
 'use strict';
+let settings = {
+  "example":{hoverText:"This is just an example...",color:"default","onclick":(e)=>{alert("You clicked the example :)");}},
+  "User settings":{"submenu":{
+    "Logout":{hoverText:"log out",confirm:true,"onclick":()=>{localStorage.clear();location.reload();}},
+    "Reload":{hoverText:"reload page",confirm:true,"onclick":()=>{location.reload();}},
+    }},
+}
+
+
+
 function generateUUID() { // Public Domain/MIT
   var d = new Date().getTime();//Timestamp
   var d2 = (performance && performance.now && (performance.now()*1000)) || 0;//Time in microseconds since page-load or 0 if unsupported
