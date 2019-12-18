@@ -1,13 +1,63 @@
 'use strict';
-let settings = {
+window.settings = {
   "example":{hoverText:"This is just an example...",color:"default","onclick":(e)=>{alert("You clicked the example :)");}},
   "User settings":{"submenu":{
+    "WebPush":{class:"pushButton"},
     "Logout":{hoverText:"log out",confirm:true,"onclick":()=>{localStorage.clear();location.reload();}},
     "Reload":{hoverText:"reload page",confirm:true,"onclick":()=>{location.reload();}},
+    "DeleteMe":{hoverText:"Delete my user",text:"Delete my user",style:"color: red;",confirm:true,"onclick":()=>{window.ws.send(JSON.stringify({"type":"deleteMe","sure":"yes"}));localStorage.clear();location.reload();}},
     }},
 }
 
+function renderSettings(settings) {
+  if(settings == null){
+    settings = window.settings;
+  }
+  let settingsElement = document.getElementById("settingsMenu").children[0];
+  settingsElement.innerHTML = "";
+  for(let setting in settings){
+    console.log("rendering setting",setting);
+    var newA = document.createElement("a");
+    newA.href = "javascript:void(0)";
+    if("text" in settings[setting])
+      newA.appendChild(document.createTextNode(settings[setting]["text"]));
+    else
+      newA.appendChild(document.createTextNode(setting));
+    
+    if(settings[setting].onclick){
+      newA.onclick = settings[setting].onclick;
+    }
+    if("submenu" in settings[setting]){
+      newA.onclick = ()=>renderSettings(settings[setting]["submenu"]);
+    }
+    if("hoverText" in settings[setting]){
+      newA.title = settings[setting]["hoverText"];
+    }
+    if("class" in settings[setting]){
+      newA.classList.add(settings[setting]["class"]);
+    }
+    if("disabled" in settings[setting]){
+      newA.disabled = settings[setting]["disabled"];
+    }
+    if("style" in settings[setting]){
+      newA.style = settings[setting]["style"];
+    }
+    settingsElement.appendChild(newA);
+  }
+}
 
+document.addEventListener("keydown",(key)=>{
+  if(key.keyCode == 27){
+    settingsMenu.style.transition = "top 0.3s ease-in-out";
+    settingsMenu.style.top = '-200vh';
+    setTimeout(()=>settingsMenu.style.transition = "top 0s ease-in-out",500)
+
+    const umenu = document.getElementById("umenu");
+    umenu.style.transition = "top 0.3s ease-in-out";
+    umenu.style.top = '-200vh';
+    setTimeout(()=>umenu.style.transition = "top 0s ease-in-out",500);
+  }
+});
 
 function generateUUID() { // Public Domain/MIT
   var d = new Date().getTime();//Timestamp
@@ -81,6 +131,7 @@ var rightClickEvent = 0;
 var settingsMenu = document.querySelector('#settingsMenu');
 
 function openSettings(){
+  renderSettings();
   settingsMenu.style.transition = "top 0.3s ease-in-out";
   settingsMenu.style.top = '2.5vh';
   setTimeout(()=>settingsMenu.style.transition = "top 0s ease-in-out",500)
@@ -252,6 +303,7 @@ window.onload = ()=>{
     });
   } else {
     console.warn('Push messaging is not supported');
+    window.settings["User settings"]["submenu"]["WebPush"]["text"] = 'Push Not Supported';
     pushButton.textContent = 'Push Not Supported';
   }
 
@@ -305,6 +357,14 @@ window.onload = ()=>{
         subscribeUser();
       }
     });
+    window.settings["User settings"]["submenu"]["WebPush"]["onclick"] = function() {
+      pushButton.disabled = true;
+      if (isSubscribed) {
+        unsubscribeUser();
+      } else {
+        subscribeUser();
+      }
+    };
   
     // Set the initial subscription value
     swRegistration.pushManager.getSubscription()
@@ -326,18 +386,23 @@ window.onload = ()=>{
   function updateBtn() {
     if (Notification.permission === 'denied') {
       pushButton.textContent = 'Push Messaging Blocked.';
+      window.settings["User settings"]["submenu"]["WebPush"]["text"] = 'Push Messaging Blocked.';
       pushButton.disabled = true;
+      window.settings["User settings"]["submenu"]["WebPush"]["disabled"] = true;
       updateSubscriptionOnServer(null);
       return;
     }
   
     if (isSubscribed) {
       pushButton.textContent = 'Disable Push Messaging';
+      window.settings["User settings"]["submenu"]["WebPush"]["text"] = 'Disable Push Messaging';
     } else {
       pushButton.textContent = 'Enable Push Messaging';
+      window.settings["User settings"]["submenu"]["WebPush"]["text"] = 'Enable Push Messaging';
     }
   
     pushButton.disabled = false;
+    window.settings["User settings"]["submenu"]["WebPush"]["disabled"] = false;
   }
 
   function updateSubscriptionOnServer(subscription) {

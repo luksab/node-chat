@@ -14,49 +14,6 @@
     <script src="https://rawgit.com/farzher/fuzzysort/master/fuzzysort.js" async></script>
     
     <script src='/indexWebsocket.js' async></script>
-    <script>
-        if(localStorage.getItem("name") == null)
-            localStorage.setItem("name","me");
-        const b64toBlob = (b64Data, contentType='', sliceSize=512) => {
-        const byteCharacters = atob(b64Data);
-        const byteArrays = [];
-
-        for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
-            const slice = byteCharacters.slice(offset, offset + sliceSize);
-
-            const byteNumbers = new Array(slice.length);
-            for (let i = 0; i < slice.length; i++) {
-            byteNumbers[i] = slice.charCodeAt(i);
-            }
-
-            const byteArray = new Uint8Array(byteNumbers);
-            byteArrays.push(byteArray);
-        }
-            
-        const blob = new Blob(byteArrays, {type: contentType});
-            return blob;
-        }
-
-        const contentType = 'image/png';
-        const b64Data = 'iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==';
-
-        const blob = b64toBlob(b64Data, contentType);
-        const blobUrl = URL.createObjectURL(blob);
-
-        const img = document.createElement('img');
-        img.src = blobUrl;
-
-        blob.arrayBuffer().then((arrayBuff)=>{
-            arr = new Uint8Array(arrayBuff);
-            arr = [0,0,0,1,0].concat(...arr);
-            buf = new Uint8Array(arr).buffer;
-
-            arr2= new Uint8Array(buf);
-        });
-
-
-        //document.querySelector("#connecting").appendChild(img);
-    </script>
 </head>
 <body>
 <div style="overflow:hidden;height:100vh" >	
