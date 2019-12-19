@@ -297,7 +297,15 @@ close: (ws, code, message) => {
   if(req.getUrl() == "/")
     data = fs.readFileSync('./public/websocket/index.html');
   else
-    data = fs.readFileSync('./public'+req.getUrl());
+    try {
+      data = fs.readFileSync('./public'+req.getUrl()); 
+    } catch (e) {
+      console.log(e);
+    }
+  if(data == null){
+    res.writeStatus('404');
+    res.end();
+  }
   res.end(data);
   //res.end(global["index"]);
 }).listen(8000, (token) => {
