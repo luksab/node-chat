@@ -294,8 +294,9 @@ close: (ws, code, message) => {
   console.log('WebSocket closed');
 }
 }).any('/*', (res, req) => {
+  let data;
   if(req.getUrl() == "/")
-    data = fs.readFileSync('./public/websocket/index.html');
+    data = fs.readFileSync('./public/index.html');
   else
     try {
       data = fs.readFileSync('./public'+req.getUrl()); 

@@ -6,14 +6,22 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#2F3BA2"/>
-    <link rel="manifest" href="/static/manifest.json">
+    <!--<link rel="manifest" href="/static/manifest.json">-->
     <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon16.png" />
     <link rel="apple-touch-icon" href="/images/icons/icon-192x192.png">
     <link rel="stylesheet" href="/index.css" media="none" onload="if(media!='all')media='all'">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" async></script>
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js' async></script>
     <script src="https://rawgit.com/farzher/fuzzysort/master/fuzzysort.js" async></script>
-    <script src='/index.js' async></script>
+    
+    <script src='/JS/eventHandlers.js' async></script>
+    <script src='/JS/renderSettings.js' async></script>
+    <script src='/JS/unibabel.js' async></script>
+    <script src='/JS/images.js' async></script>
+    <script src='/JS/crypto.js' async></script>
+    <script src='/JS/webPush.js' async></script>
+    <script src='/JS/indexedDB.js' async></script>
+    
+    <script src='/JS/indexWebsocket.js' async></script>
 </head>
 <body>
 <div style="overflow:hidden;height:100vh" >	
@@ -39,12 +47,11 @@
     <main>
     <div align=center id="chat" class="chat">
         <div id="nickname">
-            <form class="wrap" id="set-nickname">
-                <label for="nick">Please type in your nickname and press enter.</label>
-                <input id="nick" name="nick" type="text" placeholder="nickname" autocomplete="off"/>
+            <form action="#" class="wrap" id="set-nickname">
+                <label for="nick">Please type in your password and press enter.</label>
                 <input id="passwd" aria-label="password" type="password" placeholder="password (optional)" autocomplete="new-password"/>
-                <input type="submit" id="register" value="Register" margin = "10px">
-                <p id="nickname-err">Wrong password or nick unavailable</p>
+                <input type="submit" id="register" value="Register" margin = "10px" disabled>
+                <p id="nickname-err">Wrong password or other error...please try again</p>
             </form>
         </div>
         <div id="connecting">
@@ -78,6 +85,7 @@
         <a href="javascript:void(0)" class="pushButton"></a>
         <a href="javascript:void(0)" id="Logout">Logout</a>
         <a href="javascript:void(0)" id="Reload">Reload</a>
+        <a href="javascript:void(0)" id="DeleteMe" style="color: red;">Delete my user</a>
     </div>
     </div>
 </body>
