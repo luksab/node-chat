@@ -89,13 +89,13 @@ function detectswipe(el,func) {
     var t = e.touches[0];
     swipe_det.sX = t.screenX; 
     swipe_det.sY = t.screenY;
-  },false);
+  },{passive: true});
   ele.addEventListener('touchmove',function(e){
     //e.preventDefault();
     var t = e.touches[0];
     swipe_det.eX = t.screenX; 
     swipe_det.eY = t.screenY;    
-  },false);
+  },{passive: true});
   ele.addEventListener('touchend',function(e){
     //horizontal detection
     if ((((swipe_det.eX - min_x > swipe_det.sX) || (swipe_det.eX + min_x < swipe_det.sX)) && ((swipe_det.eY < swipe_det.sY + max_y) && (swipe_det.sY > swipe_det.eY - max_y) && (swipe_det.eX > 0)))) {
@@ -113,7 +113,7 @@ function detectswipe(el,func) {
     }
     direc = "";
     swipe_det.sX = 0; swipe_det.sY = 0; swipe_det.eX = 0; swipe_det.eY = 0;
-  },false);  
+  },{passive: true});  
 }
 
 
