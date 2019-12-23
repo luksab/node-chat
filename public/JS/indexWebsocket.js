@@ -42,8 +42,8 @@ function refreshNicks() {
         string += '<b style="background: coral">';
       else
         string += '<b>';
-      string += nicks[i];
       string += Object.keys(names).includes(nicks[i].target) ? names[nicks[i].target] : nicks[i].target;
+      console.log("asd",nicks[i].target);
       string += '</b>';
     }
     return nicknameElement.innerHTML = string;
