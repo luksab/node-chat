@@ -68,8 +68,7 @@ function rebuildNicknames() {
 }
 window.onload = () => {
   console.log("load");
-  paste_image_reader(jQuery);
-  initImage();
+  //initImage();
   localStorage.setItem('name', localStorage.getItem('name') || "me");
 
   let lines = document.getElementById('lines'), contactsSearch = document.getElementById('contactsSearch');
@@ -123,7 +122,7 @@ window.onload = () => {
         <input type="submit" id="changeNick" value="change" margin = "10px">
         </form>`
         document.getElementById("changeNick").onclick = async function () {
-          window.ws.send(JSON.stringify({ "type": "changeName", "name": $('#changeNickname').val() }))
+          window.ws.send(JSON.stringify({ "type": "changeName", "name": document.getElementById("changeNickname").value}))
           const umenu = document.getElementById("umenu");
           umenu.style.transition = "top 0.3s ease-in-out";
           umenu.style.top = '-200vh';
@@ -221,7 +220,8 @@ window.onload = () => {
 
   function dm(from, msg, uuid, encrypted = false, chat = false) {
     console.log(users);
-    from = users[from]["name"] || from;
+    if(users[from])
+      from = users[from]["name"] || from;
     console.log(uuid)
     chat = chat ? from : chat;
     console.log(chat)
@@ -308,16 +308,10 @@ window.onload = () => {
   }
 
   contactsSearch.onchange = contactsSearch.onkeyup = contactsSearch.onclick = () => {
+    refreshNicks();
     if (contactsSearch.value != "") {
       console.log(nicknames);
-      refreshNicks();
       return ws.send(JSON.stringify({ "type": "userSearch", "search": contactsSearch.value }));
-    }
-    $('#nicknames').empty().append($('<span>Online: </span>'));
-    $('#nicknames').append($('<b>').text("allChat"));
-    //var nicknames = document.getElementsByClassName("nicknames");
-    for (var i in nicknames) {
-      $('#nicknames').append($((nicknames[i] === localStorage.getItem('name')) ? '<b style="background: coral">' : '<b>').text(nicknames[i]));
     }
   };
 
@@ -339,7 +333,7 @@ window.onload = () => {
 
   document.getElementById('register').onclick = async function () {
     document.getElementById('register').disabled = true;
-    const passwd = $('#passwd').val();
+    const passwd = document.getElementById("passwd").value;
     if (localStorage.getItem("encryptKeyS").indexOf("-----BEGIN RSA PRIVATE KEY-----") !== -1 &&
       localStorage.getItem("signKeyS").indexOf("-----BEGIN RSA PRIVATE KEY-----") !== -1 &&
       localStorage.getItem("uid") != null) {
@@ -377,27 +371,33 @@ window.onload = () => {
     return false;
   }
 
-  $('#send-message').submit(function (e) {
+  document.getElementById('send-message').addEventListener (
+    "submit", function (e) {
     e.preventDefault();
     let uuid = generateUUID();
+    const messageElement = document.getElementById("message");
     if (dmName) {
       if (publicKeys[dmName])
-        encryptData(publicKeys[dmName].encrypt, $('#message').val()).then((encyptedData) => {
+        encryptData(publicKeys[dmName].encrypt, messageElement.value).then((encyptedData) => {
           signData(signKey, encyptedData).then((SignedTest) => {
-            dm('me', $('#message').val(), uuid, true);
+            dm('me', messageElement.value, uuid, true);
             console.log("sending Encrypted MSG");
             console.log(JSON.stringify({ "type": "encryptedDM", "user": dmName, "msg": encyptedData, "signature": SignedTest, "uuid": uuid }))
             window.ws.send(JSON.stringify({ "type": "encryptedDM", "user": dmName, "msg": encyptedData, "signature": SignedTest, "uuid": uuid }));
-            $('#message').val('').focus();
-            $('#lines').get(0).scrollTop = lines.scrollHeight;
+            messageElement.value = "";
+            messageElement.focus();
+            document.getElementById("lines").scrollTop = lines.scrollHeight;
+            //$('#lines').get(0).scrollTop = lines.scrollHeight;
           })
         })
       else {
-        dm('me', $('#message').val(), uuid);
-        console.log(JSON.stringify({ "type": "dm", "user": dmName, "msg": $('#message').val(), "uuid": uuid }))
-        window.ws.send(JSON.stringify({ "type": "dm", "user": dmName, "msg": $('#message').val(), "uuid": uuid }));
-        $('#message').val('').focus();
-        $('#lines').get(0).scrollTop = lines.scrollHeight;
+        dm('me', messageElement.value, uuid);
+        console.log(JSON.stringify({ "type": "dm", "user": dmName, "msg": messageElement.value, "uuid": uuid }))
+        window.ws.send(JSON.stringify({ "type": "dm", "user": dmName, "msg": messageElement.value, "uuid": uuid }));
+        messageElement.value = "";
+        messageElement.focus();
+        document.getElementById("lines").scrollTop = lines.scrollHeight;
+        //$('#lines').get(0).scrollTop = lines.scrollHeight;
       }
       return false;
     }

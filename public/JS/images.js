@@ -71,6 +71,7 @@ function paste_image_reader($) {
 };
 
 function initImage() {
+    paste_image_reader(jQuery);
     $('#imagefile').bind('change', function (e) {
         reduceFileSize(this.files[0], 600, Infinity, 0.9, blob => {
             let uuid = generateUUID();

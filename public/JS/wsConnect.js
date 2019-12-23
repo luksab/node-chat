@@ -8,10 +8,10 @@ const wsConnect = () => {
     else
         window.ws = new WebSocket("wss://luksab.de/websocket/index.html:8000");
     window.ws.onopen = async function () {
-        $('#chat').addClass('connected');
+        document.getElementById("chat").classList.add('connected');
         document.getElementById('register').disabled = false;
 
-        const passwd = $('#passwd').val();
+        const passwd = document.getElementById("passwd").value;
         if (localStorage.getItem("encryptKeyS").indexOf("-----BEGIN RSA PRIVATE KEY-----") !== -1 &&
             localStorage.getItem("signKeyS").indexOf("-----BEGIN RSA PRIVATE KEY-----") !== -1 &&
             localStorage.getItem("uid") != null) {
@@ -48,9 +48,9 @@ const wsConnect = () => {
                 break;
             } case "error": {
                 console.error(msg["msg"]);
-                $('#chat').removeClass('nickname-set');
+                document.getElementById("chat").classList.remove('nickname-set');
                 document.getElementById('register').disabled = false;
-                $('#nickname-err').css('visibility', 'visible');
+                document.getElementById("nickname-err").style.visibility = 'visible';
                 document.getElementById('nickname-err').innerHTML = msg["msg"];
                 if (msg["code"] === "no uid") {
                     localStorage.removeItem("uid");
@@ -84,11 +84,13 @@ const wsConnect = () => {
                     window.ws.send(JSON.stringify({ "type": "myFriends" }));
                     refreshNicks();
                     localStorage.setItem("uid", ws.uid);
-                    $('#message').val('').focus();
+                    const messageElement = document.getElementById("message");
+                    messageElement.value = "";
+                    messageElement.focus();
                     document.getElementById('message').disabled = false;
                     document.getElementById('imagefile').disabled = false;
-                    return $('#chat').addClass('nickname-set');
-                } $('#nickname-err').css('visibility', 'visible');
+                    return document.getElementById("chat").classList.add('nickname-set');
+                } document.getElementById("nickname-err").style.visibility = 'visible';
                 break;
             } case "search": {
                 if (msg["name"])
@@ -123,7 +125,7 @@ const wsConnect = () => {
         }
     };
     window.ws.onclose = () => {
-        $('#chat').removeClass('connected');
+        document.getElementById("chat").classList.remove('connected');
         document.getElementById('message').disabled = true;
         document.getElementById('imagefile').disabled = true;
         document.getElementById('register').disabled = true;
