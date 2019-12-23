@@ -29,26 +29,35 @@ let users = {/*
 function refreshNicks() {
   rebuildNicknames();
   console.log("refreshNicks", names);
+  const nicknameElement = document.getElementById("nicknames");
+  let string = "";
+  string = '<span>Online: </span>';
+  string += '<b>allChat</b>';
   if (contactsSearch.value != "") {
-    console.log(nicknames);
     let nicks = fuzzysort.go(contactsSearch.value, Object.values(nicknames), { threshold: -999 });
-    $('#nicknames').empty().append($('<span>Online: </span>'));
-    $('#nicknames').append($('<b>').text("allChat"));
-    //var nicknames = document.getElementsByClassName("nicknames");
     for (var i in nicks) {
-      $('#nicknames').append($((nicks[i].target === localStorage.getItem('name')) ?
-        '<b style="background: coral">' : '<b>').text(Object.keys(names).includes(nicks[i].target) ? names[nicks[i].target] : nicks[i].target));
-      $('#nicknames').append($('<b>').text());
+      if (nicks[i] == 0)
+        break;
+      if (nicks[i].target === localStorage.getItem('name'))
+        string += '<b style="background: coral">';
+      else
+        string += '<b>';
+      string += nicks[i];
+      string += Object.keys(names).includes(nicks[i].target) ? names[nicks[i].target] : nicks[i].target;
+      string += '</b>';
     }
-    return;
+    return nicknameElement.innerHTML = string;
   }
-  $('#nicknames').empty().append($('<span>Online: </span>'));
-  $('#nicknames').append($('<b>').text("allChat"));
-  //var nicknames = document.getElementsByClassName("nicknames");
   for (var i in nicknames) {
-    $('#nicknames').append($((nicknames[i] === localStorage.getItem('name')) ?
-      '<b style="background: coral">' : '<b>').text(Object.keys(names).includes(nicknames[i]) ? names[nicknames[i]] : nicknames[i]));
+    console.log("asdf", nicknames[i]);
+    if (nicknames[i] === localStorage.getItem('name'))
+      string += '<b style="background: coral">';
+    else
+      string += '<b>';
+    string += Object.keys(names).includes(nicknames[i]) ? names[nicknames[i]] : nicknames[i];
+    string += '</b>';
   }
+  nicknameElement.innerHTML = string;
 }
 function rebuildNicknames() {
   nicknames = [];
