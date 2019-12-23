@@ -15,8 +15,16 @@ function renderSettings(settings) {
   if (settings == null) {
     settings = window.settings;
   }
-  let settingsElement = document.getElementById("settingsMenu").children[0];
-  settingsElement.innerHTML = "";
+  let settingsElements = document.getElementById("settingsMenu").getElementsByTagName("div");
+  let settLen = settingsElements.length;
+  if(settLen){
+    let oldElement = settingsElements[settLen-1];
+    oldElement.style.left = "0%";
+    oldElement.style.transform = "translateX(-100%)";
+  }
+  let newElement = document.createElement("div");
+  newElement.style="transition: left 0.25s ease 0s;position: absolute;width: fit-content;left: 100%;transform: translateX(100%);";
+  newElement.innerHTML = "";
   for (let setting in settings) {
     console.log("rendering setting", setting);
     var newA = document.createElement("a");
@@ -43,6 +51,29 @@ function renderSettings(settings) {
     if ("style" in settings[setting]) {
       newA.style = settings[setting]["style"];
     }
-    settingsElement.appendChild(newA);
+    newElement.appendChild(newA);
   }
+  document.getElementById("settingsMenu").appendChild(newElement);
+  setTimeout(() => {
+    newElement.style.left = "50%";
+    newElement.style.transform = "translateX(-50%)";
+  },20);
+  //newElement.style="transition: all 1s ease 1s; position: absolute;width: fit-content;left: 50%;transform: translateX(-50%);";
+}
+function removeOldSetting() {
+  let settingsElements = document.getElementById("settingsMenu").getElementsByTagName("div");
+  let settLen = settingsElements.length;
+  if(settLen < 2){
+    return closeSettings();
+  }
+  let oldElement = settingsElements[settLen-1];
+  let newElement = settingsElements[settLen-2];
+  oldElement.style.left = "100%";
+  oldElement.style.transform = "translateX(100%)";
+  setTimeout(() => {
+    oldElement.parentNode.removeChild(oldElement);
+    oldElement = null;
+  },350);
+  newElement.style.left = "50%";
+  newElement.style.transform = "translateX(-50%)";
 }

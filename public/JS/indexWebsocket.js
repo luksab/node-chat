@@ -318,7 +318,7 @@ window.onload = () => {
   //
   // dom manipulation code
   //
-  document.getElementById('DeleteMe').onclick = () => {
+  /*document.getElementById('DeleteMe').onclick = () => {
     if (document.getElementById('DeleteMe').innerHTML === "Delete my user") {
       window.ws.send(JSON.stringify({ "type": "deleteMe", "sure": "no" }));
       document.getElementById('DeleteMe').innerHTML = "Are you sure you want to delete your user?";
@@ -329,7 +329,7 @@ window.onload = () => {
       localStorage.clear();
       location.reload();
     }
-  }
+  }*/
 
   document.getElementById('register').onclick = async function () {
     document.getElementById('register').disabled = true;

@@ -18,7 +18,7 @@ function openSettings() {
 }
 function closeSettings(event) {
   //console.log(event)
-  if (event.target == settingsMenu) {
+  if (!event || event.target == settingsMenu) {
     settingsMenu.style.transition = "top 0.3s ease-in-out";
     settingsMenu.style.top = '-200vh';
     setTimeout(() => settingsMenu.style.transition = "top 0s ease-in-out", 500);
