@@ -50,24 +50,14 @@ MongoClient.connect(url,{
     //db.close();
   });
 });
-fs.readFile('./public/index.html', function (err, data) {
-  if (err) {
-      global["index"] = `Error getting the file: ${err}.`;
-  } else {
-      //res.writeHeader('Content-type', 'text/html');
-      global["index"] = data;
-  }
-});
 
+let cache = {}
 setInterval(() => {
-  fs.readFile('./public/index.html', function (err, data) {
-    if (err) {
-        global["index"] = `Error getting the file: ${err}.`;
-    } else {
-        //res.writeHeader('Content-type', 'text/html');
-        global["index"] = data;
-    }
-  });
+  for(let file in cache){
+    fs.readFile('./public/'+file, function (err, data) {
+      cache[file] = err ? `Error getting the file: ${err}.` : data;
+    });
+  }
 }, 1000);
 
 require('uWebSockets.js').App({})
@@ -296,12 +286,14 @@ close: (ws, code, message) => {
 }).any('/*', (res, req) => {
   var hrstart = process.hrtime();
   let data;
-  if(req.getUrl() == "/")
-    data = global["index"];//fs.readFileSync('./public/index.html');
+  if(req.getUrl() == "/"){
+    data = cache["index.html"] || fs.readFileSync('./public/index.html');
+    cache[req.getUrl()] = data;
+  }
   else
     try {
-      data = global[req.getUrl()] || fs.readFileSync('./public'+req.getUrl());
-      global[req.getUrl()] = data;
+      data = cache[req.getUrl()] || fs.readFileSync('./public'+req.getUrl());
+      cache[req.getUrl()] = data;
     } catch (e) {
       console.log(e);
     }
@@ -312,7 +304,7 @@ close: (ws, code, message) => {
   res.end(data);
   hrend = process.hrtime(hrstart);
   console.log("sending",req.getUrl(),"took", hrend[0],"s,", hrend[1] / 1000000,"ms");
-  //res.end(global["index"]);
+  //res.end(cache["index"]);
 }).listen(8000, (token) => {
 if (token) {
   console.log('Listening to port ' + 8000);
