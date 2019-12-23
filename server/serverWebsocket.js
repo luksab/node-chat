@@ -50,7 +50,7 @@ MongoClient.connect(url,{
     //db.close();
   });
 });
-fs.readFile('./public/websocket/index.html', function (err, data) {
+fs.readFile('./public/index.html', function (err, data) {
   if (err) {
       global["index"] = `Error getting the file: ${err}.`;
   } else {
@@ -60,7 +60,7 @@ fs.readFile('./public/websocket/index.html', function (err, data) {
 });
 
 setInterval(() => {
-  fs.readFile('./public/websocket/index.html', function (err, data) {
+  fs.readFile('./public/index.html', function (err, data) {
     if (err) {
         global["index"] = `Error getting the file: ${err}.`;
     } else {
@@ -294,12 +294,14 @@ close: (ws, code, message) => {
   console.log('WebSocket closed');
 }
 }).any('/*', (res, req) => {
+  var hrstart = process.hrtime();
   let data;
   if(req.getUrl() == "/")
-    data = fs.readFileSync('./public/index.html');
+    data = global["index"];//fs.readFileSync('./public/index.html');
   else
     try {
-      data = fs.readFileSync('./public'+req.getUrl()); 
+      data = global[req.getUrl()] || fs.readFileSync('./public'+req.getUrl());
+      global[req.getUrl()] = data;
     } catch (e) {
       console.log(e);
     }
@@ -308,6 +310,8 @@ close: (ws, code, message) => {
     res.end();
   }
   res.end(data);
+  hrend = process.hrtime(hrstart);
+  console.log("sending",req.getUrl(),"took", hrend[0],"s,", hrend[1] / 1000000,"ms");
   //res.end(global["index"]);
 }).listen(8000, (token) => {
 if (token) {
