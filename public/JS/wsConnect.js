@@ -74,7 +74,7 @@ const wsConnect = () => {
                 let randomMessage = await decryptData(privateKey, FromBase64(msg["rS"]));
                 console.log(uid);
                 window.ws.uid = uid;
-                users[uid] = { "uid": uid, "name": "me" };
+                users[uid] = { "uid": uid, "name": localStorage.getItem('name') || "me" };
                 console.log(randomMessage);
                 console.log(arrayBufferToText(randomMessage));
                 window.ws.send(JSON.stringify({ "type": "randomMsg", "randomMsg": arrayBufferToText(randomMessage) }));
