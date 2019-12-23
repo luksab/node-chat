@@ -60,7 +60,7 @@ detectswipe('mySidenav', (el, d) => (d === 'l') ? cycleNavBar() : false);
 
 
 
-
+var rightClickEvent = 0;
 
 function addFriendEvent(event){
   if(event.target.innerHTML === "Yes"){

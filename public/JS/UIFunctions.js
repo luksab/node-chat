@@ -9,8 +9,7 @@ function cycleNavBar(close) {
   }
   return false;
 }
-var rightClickEvent = 0;
-var settingsMenu = document.querySelector('#settingsMenu');
+
 function openSettings() {
   renderSettings();
   settingsMenu.style.transition = "top 0.3s ease-in-out";
@@ -25,3 +24,9 @@ function closeSettings(event) {
     setTimeout(() => settingsMenu.style.transition = "top 0s ease-in-out", 500);
   }
 }
+window.onresize = function(event) {
+if(window.matchMedia('(min-width: 800px)').matches){
+      if(document.getElementById("mySidenav").style.width == "0px")
+          document.getElementById("mySidenav").style.width = "25em";
+  }
+};

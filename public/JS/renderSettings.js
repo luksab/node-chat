@@ -10,6 +10,7 @@ window.settings = {
     }
   },
 };
+var settingsMenu = document.querySelector('#settingsMenu');
 function renderSettings(settings) {
   if (settings == null) {
     settings = window.settings;
