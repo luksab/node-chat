@@ -55,6 +55,7 @@ window.onload = ()=>{
   console.log("load");
   paste_image_reader(jQuery);
   initImage();
+  localStorage.setItem('name',localStorage.getItem('name') || "me");
 
   let lines = document.getElementById('lines'), contactsSearch = document.getElementById('contactsSearch');
   let dmName = location.search.substring(1)?location.search.substring(1):"allChat", dms={};
