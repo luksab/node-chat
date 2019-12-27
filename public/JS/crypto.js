@@ -255,8 +255,8 @@ var scopeEncrypt = ["encrypt", "decrypt"]
 let encryptKey = false;
 let signKey = false;
 
-//var saltHex = '2618a03369d25a4bf216dd4136aa8a9cec15085a15d34ce9f21812f7b1e66863';
-//var saltBuf = Unibabel.hexToBuffer(saltHex);
+var saltHex = '2618a03369d25a4bf216dd4136aa8a9cec15085a15d34ce9f21812f7b1e66863';
+var saltBuf;
 //var passphrase = 'secret';
 
 var myIV = localStorage.getItem('myIV')

@@ -68,11 +68,11 @@ function rebuildNicknames() {
 }
 window.onload = () => {
   console.log("load");
-  /*var unibabel = document.createElement("script");
+  var unibabel = document.createElement("script");
   unibabel.async = true;
   unibabel.src = "/JS/unibabel.js";
-  unibabel.onload = ()=>{console.log("unibabel loaded")};
-  document.getElementsByTagName("head")[0].appendChild(unibabel);*/
+  unibabel.onload = ()=>{saltBuf = Unibabel.hexToBuffer(saltHex);};
+  document.getElementsByTagName("head")[0].appendChild(unibabel);
   //initImage();
   localStorage.setItem('name', localStorage.getItem('name') || "me");
 
