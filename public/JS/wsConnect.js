@@ -1,10 +1,8 @@
 const wsConnect = () => {
-    if (!navigator.onLine) {
-        window.setTimeout(wsConnect, 500);
-    }
-    if (location.href === "http://localhost:8000/") {
+    if (!navigator.onLine)
+        return window.setTimeout(wsConnect, 500);
+    if (location.href === "http://localhost:8000/")
         window.ws = new WebSocket("ws://localhost:8000/index.html");
-    }
     else
         window.ws = new WebSocket("wss://luksab.de/websocket/index.html:8000");
     window.ws.onopen = async function () {
@@ -133,7 +131,7 @@ const wsConnect = () => {
         window.setTimeout(wsConnect, 500);
     }
     window.ws.onerror = (e) => {
-        console.error(e.message);
+        console.error("ws error:",e.message);
         window.ws.close();
     }
 };
