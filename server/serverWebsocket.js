@@ -5,7 +5,7 @@ const fs = require('fs'),
  webpush = require('web-push');
 //Push Notification
 
-const pushOptions = require('../pushOptions.json');
+//const pushOptions = require('../pushOptions.json');
 let webPushSubs = {};
 const publicEncryptKeys = {}
 const publicSignKeys = {}
