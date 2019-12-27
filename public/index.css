@@ -293,12 +293,6 @@ label {
     border-top-right-radius: 1em;
 }
 
-#send-message button, #dm_send-message button{
-  line-height: 5vh;
-  margin: 1vh 0;
-  position: relative;
-}
-
 button, div.filebutton {
   line-height: 4vh;
   -webkit-user-select: none;
@@ -342,13 +336,6 @@ div.filebutton {
   margin: 0;
 }
 
-footer {
-  position: fixed;
-  left: 50%;
-  bottom: 20px;
-  transform: translate(-50%, -50%);
-  margin: 0 auto;
-}
 
 
 
