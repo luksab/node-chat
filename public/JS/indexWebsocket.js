@@ -26,7 +26,7 @@ window.onload = () => {
     document.getElementsByTagName('span')[0].innerText = "☰ " + ((dmName === "allChat") ? "Cool Chat" : dmName);
   }
 
-  const isTouch = (('ontouchstart' in window) || (navigator.MaxTouchPoints > 0));
+  //const isTouch = (('ontouchstart' in window) || (navigator.MaxTouchPoints > 0));
 
   wsConnect();
 
