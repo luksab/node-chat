@@ -117,6 +117,11 @@ const wsConnect = () => {
                 refreshNicks();
                 msg["friends"].forEach((uid) => window.ws.send(JSON.stringify({ "type": "whois", "uid": parseInt(uid) })));
                 break;
+            } case "announcement": {
+                let p = document.createElement("p");
+                let em = document.createElement("em");
+                em.innerText = msg["msg"];
+                p.appendChild(em);
             } default:
                 console.log("Message from Server:", msg);
                 break;

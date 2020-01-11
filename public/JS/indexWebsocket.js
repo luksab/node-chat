@@ -30,11 +30,7 @@ window.onload = () => {
 
   wsConnect();
 
-  /*socket.on('announcement', function (msg) {
-    $('#lines').append($('<p>').append($('<em>').text(msg)));
-  });
-
-  socket.on('reload', ()=>location.reload());
+  /*socket.on('reload', ()=>location.reload());
   
   socket.on('nicknames', function (nicks) {
     nicknames = nicks
