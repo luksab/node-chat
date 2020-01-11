@@ -1,4 +1,11 @@
 'use strict';
+let lines;
+
+function message(from, msg) {
+  lines.innerHTML += '<p><b>' + from + '</b>' + msg + '</p>';
+  setTimeout(() => lines.scrollTop = lines.scrollHeight, 10);
+}
+
 function cycleNavBar(close) {
   if (!window.matchMedia('(min-width: 800px)').matches) {
     if (document.getElementById("mySidenav").style.width == "25em")
@@ -212,3 +219,42 @@ document.getElementById('send-message').addEventListener(
     }
     alert("No dm");
   });
+
+function dm(from, msg, uuid, encrypted = false, chat = false) {
+  console.log(users);
+  if (users[from])
+    from = users[from]["name"] || from;
+  console.log(uuid)
+  chat = chat ? from : chat;
+  console.log(chat)
+  if (chat && chat !== dmName) {
+    if (!(dms.hasOwnProperty(chat))) {
+      dms[chat] = [];
+    }
+    dms[chat].push({ from: from, msg: msg, encrypted: encrypted, uuid: uuid });
+    addMessageToDB(chat, from, msg, encrypted, lines.children[lines.children.length - 1], uuid);
+    return;
+  }
+
+  if (!(dms.hasOwnProperty(dmName))) {
+    dms[dmName] = [];
+  }
+  dms[dmName].push({ from: from, msg: msg, encrypted: encrypted, uuid: uuid });
+  if (encrypted)
+    lines.innerHTML += '<p class="encrypted" uuid="' + uuid + '"><b>' + from + '</b>' + msg + '</p>';
+  else
+    lines.innerHTML += '<p uuid="' + uuid + '"><b>' + from + '</b>' + msg + '</p>';
+  addMessageToDB(dmName, from, msg, encrypted, lines.children[lines.children.length - 1], uuid);
+  if (msg.indexOf("<img") === 0) {
+    const img = lines.children[lines.children.length - 1].children[1];
+    img.removeAttribute("height");
+    img.removeAttribute("width");
+    const w = (lines.clientWidth | 0) - 20, h = (lines.clientHeight | 0) - 20;
+    if (w < h)
+      img.width = w;
+    else
+      img.height = h;
+    img.onload = () => lines.scrollTop = lines.scrollHeight;
+  }
+  setTimeout(() => lines.scrollTop = lines.scrollHeight, 10);
+}

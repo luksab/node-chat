@@ -135,3 +135,10 @@ const wsConnect = () => {
         window.ws.close();
     }
 };
+
+window.setInterval(() => {
+    if (window.ws.readyState === 1) {
+        console.log("ping!");
+        window.ws.send("ping");
+    }
+}, 10000)
