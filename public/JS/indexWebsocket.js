@@ -30,19 +30,6 @@ window.onload = () => {
 
   wsConnect();
 
-  /*socket.on('reload', ()=>location.reload());
-  
-  socket.on('nicknames', function (nicks) {
-    nicknames = nicks
-    $('#nicknames').empty().append($('<span>Online: </span>'));
-    $('#nicknames').append($('<b>').text("allChat"));
-    //var nicknames = document.getElementsByClassName("nicknames");
-    for (var i in nicknames) {
-      $('#nicknames').append($((nicknames[i]===localStorage.getItem('name'))?'<b style="background: coral">':'<b>').text(nicknames[i]));
-    }
-  });
-  */
-
   /*socket.on('reconnect', function () {
     //$('#lines').remove();
     socket.emit('nickname', {nick:localStorage.getItem('name'), passwd:localStorage.getItem('passwd')},(set) => {
@@ -75,26 +62,6 @@ window.onload = () => {
         }
         dms[msg.from].push({from:msg.from,msg:'<img background-image src="' + msg.msg + '" width="'+ w +'"/>',uuid:msg.uuid});
       }
-  })
-
-  socket.on('error', function (e) {
-    message('System', e ? e : 'A unknown error occurred');
-  });*/
-
-  //
-  // dom manipulation code
-  //
-  /*document.getElementById('DeleteMe').onclick = () => {
-    if (document.getElementById('DeleteMe').innerHTML === "Delete my user") {
-      window.ws.send(JSON.stringify({ "type": "deleteMe", "sure": "no" }));
-      document.getElementById('DeleteMe').innerHTML = "Are you sure you want to delete your user?";
-    }
-    else if (document.getElementById('DeleteMe').innerHTML === "Are you sure you want to delete your user?") {
-      window.ws.send(JSON.stringify({ "type": "deleteMe", "sure": "yes" }));
-      document.getElementById('DeleteMe').innerHTML = "Deleting...";
-      localStorage.clear();
-      location.reload();
-    }
-  }*/
+  })*/
 
 };

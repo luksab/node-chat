@@ -122,6 +122,8 @@ const wsConnect = () => {
                 let em = document.createElement("em");
                 em.innerText = msg["msg"];
                 p.appendChild(em);
+            } case "reload": {
+                location.reload();
             } default:
                 console.log("Message from Server:", msg);
                 break;
