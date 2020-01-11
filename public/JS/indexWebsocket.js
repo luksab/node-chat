@@ -20,7 +20,9 @@ window.onload = () => {
   //initImage();
   localStorage.setItem('name', localStorage.getItem('name') || "me");
 
-  lines = document.getElementById('lines'), contactsSearch = document.getElementById('contactsSearch');
+  if (lines == null || contactsSearch == null) {
+    lines = document.getElementById('lines'), contactsSearch = document.getElementById('contactsSearch');
+  }
   let dmName = location.search.substring(1) ? location.search.substring(1) : "allChat", dms = {};
   if (dmName != "allChat") {
     document.getElementsByTagName('span')[0].innerText = "☰ " + ((dmName === "allChat") ? "Cool Chat" : dmName);

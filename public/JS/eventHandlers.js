@@ -156,7 +156,10 @@ function mouseY(evt) {
 }
 
 
-window.addEventListener('load', (ev)=> {
+window.addEventListener('load', (ev) => {
+  if (lines == null || contactsSearch == null) {
+    lines = document.getElementById('lines'), contactsSearch = document.getElementById('contactsSearch');
+  }
   contactsSearch.onchange = contactsSearch.onkeyup = contactsSearch.onclick = () => {
     refreshNicks();
     if (contactsSearch.value != "") {
