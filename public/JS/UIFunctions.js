@@ -1,5 +1,5 @@
 'use strict';
-let lines;
+let lines, contactsSearch;
 
 function message(from, msg) {
   lines.innerHTML += '<p><b>' + from + '</b>' + msg + '</p>';
