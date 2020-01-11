@@ -117,6 +117,13 @@ const wsConnect = () => {
                 refreshNicks();
                 msg["friends"].forEach((uid) => window.ws.send(JSON.stringify({ "type": "whois", "uid": parseInt(uid) })));
                 break;
+            } case "announcement": {
+                let p = document.createElement("p");
+                let em = document.createElement("em");
+                em.innerText = msg["msg"];
+                p.appendChild(em);
+            } case "reload": {
+                location.reload();
             } default:
                 console.log("Message from Server:", msg);
                 break;
@@ -135,3 +142,10 @@ const wsConnect = () => {
         window.ws.close();
     }
 };
+
+window.setInterval(() => {
+    if (window.ws.readyState === 1) {
+        console.log("ping!");
+        window.ws.send("ping");
+    }
+}, 10000)

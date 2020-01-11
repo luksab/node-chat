@@ -272,7 +272,6 @@ async function encryptMessage(publicKey, msg, IV) {
         IV = myIV;
     }
     let enc = new TextEncoder();
-    let dec = new TextDecoder("utf-8");
     let encoded = enc.encode(msg);
     let arr = await window.crypto.subtle.encrypt(
         {
@@ -282,7 +281,8 @@ async function encryptMessage(publicKey, msg, IV) {
         publicKey,
         encoded
     );
-    return dec.decode(arr);
+    console.log(new Uint8Array(arr))
+    return JSON.stringify(Array.from(new Uint8Array(arr)));
 }
 
 function separateIvFromData(buf) {
@@ -303,9 +303,20 @@ async function decryptMessage(publicKey, msg, IV) {
     if (IV == null) {
         IV = myIV;
     }
-    let enc = new TextEncoder();
     let dec = new TextDecoder("utf-8");
-    let buf = enc.encode(msg);
+    let buf = new Uint8Array(JSON.parse(msg));
+    console.log(buf);
+    let arr = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: IV }, publicKey, buf)
+    console.log(buf);
+    return dec.decode(arr);
+}
+
+async function decryptAESData(publicKey, buf, IV) {
+    //var parts = separateIvFromData(buf);//parts.iv, parts.data
+    if (IV == null) {
+        IV = myIV;
+    }
+    let dec = new TextDecoder("utf-8");
     console.log(buf);
     let arr = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: IV }, publicKey, buf)
     console.log(buf);

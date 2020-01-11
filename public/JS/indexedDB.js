@@ -55,3 +55,57 @@ DBOpenRequest.onupgradeneeded = function(event) {
   console.log('Object store created.');
 
 };
+
+function addMessageToDB(chat, from, msg, encrypted = false, element = false, uuid) {
+  try {
+    var trans = db.transaction(["messages"], 'readwrite');
+    var objectStore = trans.objectStore("messages");
+    var request = objectStore.add({ chat: chat, sender: from, message: msg, encrypted: encrypted });
+    request.onsuccess = function (event) {
+      if (element)
+        element.setAttribute("dbid", event.srcElement.result)
+      console.log(event.srcElement.result)
+    };
+    request.onerror = function (event) {
+      console.error(event);
+    }
+  }
+  catch (e) { console.error(e) }
+}
+
+
+function MessageFromDB(chat) {
+  try {
+    var trans = db.transaction(["messages"], 'readwrite');
+    var objectStore = trans.objectStore("messages");
+    var index = objectStore.index("chat");
+    var cursor = index.openCursor()
+    cursor.onsuccess = (event) => {
+      var cursor = event.target.result;
+      if (cursor) {
+        if (chat === cursor.value.chat) {
+          if (typeof cursor.value.encrypted !== "undefined" && cursor.value.encrypted)
+            lines.innerHTML += '<p class="encrypted" dbID="' + cursor.value.id + '"><b>' + cursor.value.sender + '</b>' + cursor.value.message + '</p>';
+          else
+            lines.innerHTML += '<p dbID="' + cursor.value.id + '" ><b>' + cursor.value.sender + '</b>' + cursor.value.message + '</p>';
+          if (cursor.value.message.indexOf("<img") === 0) {
+            const img = lines.children[lines.children.length - 1].children[1];
+            img.removeAttribute("height");
+            img.removeAttribute("width");
+            const w = (lines.clientWidth | 0) - 20, h = (lines.clientHeight | 0) - 20;
+            if (w < h)
+              img.width = w;
+            else
+              img.height = h;
+            img.onload = () => lines.scrollTop = lines.scrollHeight;
+          }
+        }
+        cursor.continue();
+      }
+      setTimeout(() => lines.scrollTop = lines.scrollHeight, 10);
+    }
+    cursor.onerror = (e) => console.log(e);
+    return true;
+  }
+  catch (e) { console.log(e); return false; }
+}
