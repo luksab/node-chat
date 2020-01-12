@@ -249,15 +249,58 @@ function deriveKey(saltBuf, passphrase) {
         });
 }
 
+function deriveKeyFromBuffer(saltBuf, KeyBuffer) {
+    var keyLenBits = 128;
+    var kdfname = "PBKDF2";
+    var aesname = "AES-CBC"; // AES-CTR is also popular
+    // 100 - probably safe even on a browser running from a raspberry pi using pure js ployfill
+    // 10000 - no noticeable speed decrease on my MBP
+    // 100000 - you can notice
+    // 1000000 - annoyingly long
+    var iterations = 100; // something a browser on a raspberry pi or old phone could do
+    var hashname = "SHA-256";
+    var extractable = true;
+
+    // First, create a PBKDF2 "key" containing the KeyBuffer
+    return crypto.subtle.importKey(
+        "raw",
+        KeyBuffer,
+        { "name": kdfname },
+        false,
+        ["deriveKey"]).
+        // Derive a key from the KeyBuffer
+        then(function (passphraseKey) {
+            return crypto.subtle.deriveKey(
+                {
+                    "name": kdfname
+                    , "salt": saltBuf
+                    , "iterations": iterations
+                    , "hash": hashname
+                }
+                , passphraseKey
+                // required to be 128 (or 256) bits
+                , { "name": aesname, "length": keyLenBits } // Key we want
+                , extractable                               // Extractble
+                , ["encrypt", "decrypt"]                  // For new key
+            );
+        }).
+        // Export it so we can display it
+        then(function (aesKey) {
+            return aesKey;
+            return crypto.subtle.exportKey("raw", aesKey).then(function (arrbuf) {
+                return new Uint8Array(arrbuf);
+            });
+        }).
+        catch(function (err) {
+            window.alert("Key derivation failed: " + err.message);
+        });
+}
+
 var scopeSign = ["sign", "verify"]
 var scopeEncrypt = ["encrypt", "decrypt"]
 
 let encryptKey = false;
 let signKey = false;
-
-var saltHex = '2618a03369d25a4bf216dd4136aa8a9cec15085a15d34ce9f21812f7b1e66863';
-var saltBuf;
-//var passphrase = 'secret';
 
 var myIV = localStorage.getItem('myIV')
 if (myIV == null) {
