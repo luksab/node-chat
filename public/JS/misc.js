@@ -16,8 +16,8 @@ function generateUUID() { // Public Domain/MIT
 }
 
 function addFriend(friend) {
-    window.ws.send(JSON.stringify({ "type": "addFriend", "uid": friend }));
-    let friends = new Set(JSON.parse(localStorage.getItem('friends')));
-    friends.add(friend);
-    localStorage.setItem('friends', JSON.stringify([...friends]));
+  window.ws.send(JSON.stringify({ "type": "addFriend", "uid": friend }));
+  let friends = new Set(JSON.parse(localStorage.getItem('friends')));
+  friends.add(friend);
+  localStorage.setItem('friends', JSON.stringify([...friends]));
 }
