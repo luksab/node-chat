@@ -115,6 +115,18 @@ message: async (ws, message, isBinary) => {
                 usersWs.send(JSON.stringify({"type":"dm","from":ws.uid,"msg":message["msg"],"uuid":message["uuid"]}));
             });
           }
+        }else{
+          if(users[ws["uid"]].name){
+            name = users[message["uid"]].name;
+          }
+          users[message["user"]].ws.forEach(usersWs => {
+            if(name)
+              usersWs.send(JSON.stringify({"type":"whois","uid":ws["uid"],"name":name}))
+            if(message.chat)
+              usersWs.send(JSON.stringify({"type":"dm","from":ws.uid,"msg":message["msg"],"uuid":message["uuid"],"chat":message["chat"]}));
+            else
+              usersWs.send(JSON.stringify({"type":"dm","from":ws.uid,"msg":message["msg"],"uuid":message["uuid"]}));
+          });
         }
         break;
       }
