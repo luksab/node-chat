@@ -104,8 +104,8 @@ const wsConnect = () => {
                 const saltBuf = window.crypto.getRandomValues(new Uint8Array(16));
                 const KeyBuffer = window.crypto.getRandomValues(new Uint8Array(16));
                 users[msg["uid"]]["key"] = await deriveKeyFromBuffer(saltBuf,KeyBuffer);
-                const salt = Array.from(saltBuf);
-                const key = Array.from(KeyBuffer);
+                const salt = Array.prototype.slice.call(saltBuf);
+                const key = Array.prototype.slice.call(KeyBuffer);
                 window.ws.send(JSON.stringify({ "type": "sendKey", "saltBuf": salt, "KeyBuffer": key }));
                 break;
             } case "aesKey": {
