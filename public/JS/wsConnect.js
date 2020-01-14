@@ -101,7 +101,19 @@ const wsConnect = () => {
                 break;
             } case "key": {
                 publicKeys[msg["uid"]] = msg["keys"];
+                const saltBuf = window.crypto.getRandomValues(new Uint8Array(16));
+                const KeyBuffer = window.crypto.getRandomValues(new Uint8Array(16));
+                users[msg["uid"]]["key"] = await deriveKeyFromBuffer(saltBuf,KeyBuffer);
+                const salt = Array.from(saltBuf);
+                const key = Array.from(KeyBuffer);
+                window.ws.send(JSON.stringify({ "type": "sendKey", "saltBuf": salt, "KeyBuffer": key }));
                 break;
+            } case "aesKey": {
+                let saltBuf = await decryptData(encryptKey, msg["saltBuf"]);
+                let KeyBuffer = await decryptData(encryptKey, msg["KeyBuffer"]);
+                saltBuf = new Uint8Array(saltBuf);
+                KeyBuffer = new Uint8Array(KeyBuffer);
+                users[msg["uid"]]["key"] = await deriveKeyFromBuffer(saltBuf,KeyBuffer);
             } case "changeName": {
                 users[ws.uid]["name"] = msg["name"];
                 nicknames = nicknames.filter(e => e != localStorage.getItem("name"));

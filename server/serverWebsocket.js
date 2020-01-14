@@ -146,6 +146,8 @@ message: async (ws, message, isBinary) => {
         console.log(await exportPublicKey(keys.sign));
         ws.send(JSON.stringify({"type":"key","uid":message["uid"],"keys":{"encryptS":await exportPublicKey(keys.enc),"signS":await exportPublicKey(keys.sign)}}));
         break;
+      }case "sendKey":{
+        users[message["uid"]]["ws"].forEach((websock)=>websock.send(JSON.stringify({"type":"aesKey","key":message["key"]})));
       }
       case "userSearch":{
         if(!isNaN(message["search"])){
