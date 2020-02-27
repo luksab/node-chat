@@ -1,11 +1,13 @@
 const wsConnect = () => {
     if (!navigator.onLine)
         return window.setTimeout(wsConnect, 500);
+    if (window.ws)
+        window.ws.close();
     if (location.href === "http://localhost:8000/")
         window.ws = new WebSocket("ws://localhost:8000/index.html");
     else
         window.ws = new WebSocket("wss://luksab.de/websocket/index.html:8000");
-    window.ws.onopen = async function () {
+    window.ws.onopen = async function() {
         document.getElementById("chat").classList.add('connected');
         document.getElementById('register').disabled = false;
 
@@ -24,119 +26,145 @@ const wsConnect = () => {
             return window.ws.send(JSON.stringify(toSend));
         }
     };
-    window.ws.onmessage = async (message) => {
+    window.ws.onmessage = async(message) => {
         console.log(message);
         let msg = JSON.parse(message.data);
         console.log(msg);
         switch (msg["type"]) {
-            case "dm": {
-                dm(msg.from, msg.msg, msg.uuid);
-                break;
-            } case "whois": {
-                console.log("name", msg["name"]);
-                ids[msg["name"]] = false;
-                users[msg["uid"]] = { "uid": msg["uid"] };
-                if (msg["name"]) {
-                    names[msg["uid"]] = msg["name"];
-                    ids[msg["name"]] = msg["uid"];
-                    users[msg["uid"]] = { "uid": msg["uid"], "name": msg["name"] };
+            case "dm":
+                {
+                    dm(msg.from, msg.msg, msg.uuid);
+                    break;
                 }
-                if (msg["name"] && !nicknames.includes(msg["name"]))
-                    nicknames.push(msg["name"])
-                break;
-            } case "error": {
-                console.error(msg["msg"]);
-                document.getElementById("chat").classList.remove('nickname-set');
-                document.getElementById('register').disabled = false;
-                document.getElementById("nickname-err").style.visibility = 'visible';
-                document.getElementById('nickname-err').innerHTML = msg["msg"];
-                if (msg["code"] === "no uid") {
-                    localStorage.removeItem("uid");
-                }
-                break;
-            } case "uid": {
-                let uid = parseInt(msg["uid"], 32);
-                function base64StringToArrayBuffer(b64str) {
-                    var byteStr = atob(b64str)
-                    var bytes = new Uint8Array(byteStr.length)
-                    for (var i = 0; i < byteStr.length; i++) {
-                        bytes[i] = byteStr.charCodeAt(i)
+            case "whois":
+                {
+                    console.log("name", msg["name"]);
+                    ids[msg["name"]] = false;
+                    users[msg["uid"]] = { "uid": msg["uid"] };
+                    if (msg["name"]) {
+                        names[msg["uid"]] = msg["name"];
+                        ids[msg["name"]] = msg["uid"];
+                        users[msg["uid"]] = { "uid": msg["uid"], "name": msg["name"] };
                     }
-                    return bytes.buffer
+                    if (msg["name"] && !nicknames.includes(msg["name"]))
+                        nicknames.push(msg["name"])
+                    break;
                 }
-                let FromBase64 = function (str) {
-                    return new Uint8Array(atob(str).split('').map(function (c) { return c.charCodeAt(0); }));
+            case "error":
+                {
+                    console.error(msg["msg"]);
+                    document.getElementById("chat").classList.remove('nickname-set');
+                    document.getElementById('register').disabled = false;
+                    document.getElementById("nickname-err").style.visibility = 'visible';
+                    document.getElementById('nickname-err').innerHTML = msg["msg"];
+                    if (msg["code"] === "no uid") {
+                        localStorage.removeItem("uid");
+                    }
+                    break;
                 }
-                console.log("from", FromBase64(msg["rS"]));
-                let privateKey = await importPrivateDecryptKey(localStorage.getItem("encryptKeyS"));
-                let randomMessage = await decryptData(privateKey, FromBase64(msg["rS"]));
-                console.log(uid);
-                window.ws.uid = uid;
-                users[uid] = { "uid": uid, "name": localStorage.getItem('name') || "me" };
-                console.log(randomMessage);
-                console.log(arrayBufferToText(randomMessage));
-                window.ws.send(JSON.stringify({ "type": "randomMsg", "randomMsg": arrayBufferToText(randomMessage) }));
-                break;
-            } case "succsess": {
-                if (msg["succsess"]) {
-                    window.ws.send(JSON.stringify({ "type": "myFriends" }));
+            case "uid":
+                {
+                    let uid = parseInt(msg["uid"], 32);
+
+                    function base64StringToArrayBuffer(b64str) {
+                        var byteStr = atob(b64str)
+                        var bytes = new Uint8Array(byteStr.length)
+                        for (var i = 0; i < byteStr.length; i++) {
+                            bytes[i] = byteStr.charCodeAt(i)
+                        }
+                        return bytes.buffer
+                    }
+                    let FromBase64 = function(str) {
+                        return new Uint8Array(atob(str).split('').map(function(c) { return c.charCodeAt(0); }));
+                    }
+                    console.log("from", FromBase64(msg["rS"]));
+                    let privateKey = await importPrivateDecryptKey(localStorage.getItem("encryptKeyS"));
+                    let randomMessage = await decryptData(privateKey, FromBase64(msg["rS"]));
+                    console.log(uid);
+                    window.ws.uid = uid;
+                    users[uid] = { "uid": uid, "name": localStorage.getItem('name') || "me" };
+                    console.log(randomMessage);
+                    console.log(arrayBufferToText(randomMessage));
+                    window.ws.send(JSON.stringify({ "type": "randomMsg", "randomMsg": arrayBufferToText(randomMessage) }));
+                    break;
+                }
+            case "succsess":
+                {
+                    if (msg["succsess"]) {
+                        window.ws.send(JSON.stringify({ "type": "myFriends" }));
+                        refreshNicks();
+                        localStorage.setItem("uid", ws.uid);
+                        const messageElement = document.getElementById("message");
+                        messageElement.value = "";
+                        messageElement.focus();
+                        document.getElementById('message').disabled = false;
+                        document.getElementById('imagefile').disabled = false;
+                        return document.getElementById("chat").classList.add('nickname-set');
+                    }
+                    document.getElementById("nickname-err").style.visibility = 'visible';
+                    break;
+                }
+            case "search":
+                {
+                    if (msg["name"])
+                        nicknames.push(msg["name"]);
+                    else
+                        nicknames.push(msg["uid"]);
+                    const nickSet = new Set(nicknames);
+                    nicknames = [...nickSet];
                     refreshNicks();
-                    localStorage.setItem("uid", ws.uid);
-                    const messageElement = document.getElementById("message");
-                    messageElement.value = "";
-                    messageElement.focus();
-                    document.getElementById('message').disabled = false;
-                    document.getElementById('imagefile').disabled = false;
-                    return document.getElementById("chat").classList.add('nickname-set');
-                } document.getElementById("nickname-err").style.visibility = 'visible';
-                break;
-            } case "search": {
-                if (msg["name"])
+                    break;
+                }
+            case "key":
+                {
+                    publicKeys[msg["uid"]] = msg["keys"];
+                    const saltBuf = window.crypto.getRandomValues(new Uint8Array(16));
+                    const KeyBuffer = window.crypto.getRandomValues(new Uint8Array(16));
+                    users[msg["uid"]]["key"] = await deriveKeyFromBuffer(saltBuf, KeyBuffer);
+                    const salt = Array.prototype.slice.call(saltBuf);
+                    const key = Array.prototype.slice.call(KeyBuffer);
+                    window.ws.send(JSON.stringify({ "type": "sendKey", "saltBuf": salt, "KeyBuffer": key }));
+                    break;
+                }
+            case "aesKey":
+                {
+                    let saltBuf = await decryptData(encryptKey, msg["saltBuf"]);
+                    let KeyBuffer = await decryptData(encryptKey, msg["KeyBuffer"]);
+                    saltBuf = new Uint8Array(saltBuf);
+                    KeyBuffer = new Uint8Array(KeyBuffer);
+                    users[msg["uid"]]["key"] = await deriveKeyFromBuffer(saltBuf, KeyBuffer);
+                }
+            case "changeName":
+                {
+                    users[ws.uid]["name"] = msg["name"];
+                    nicknames = nicknames.filter(e => e != localStorage.getItem("name"));
+                    localStorage.setItem("name", msg["name"]);
                     nicknames.push(msg["name"]);
-                else
-                    nicknames.push(msg["uid"]);
-                const nickSet = new Set(nicknames);
-                nicknames = [...nickSet];
-                refreshNicks();
-                break;
-            } case "key": {
-                publicKeys[msg["uid"]] = msg["keys"];
-                const saltBuf = window.crypto.getRandomValues(new Uint8Array(16));
-                const KeyBuffer = window.crypto.getRandomValues(new Uint8Array(16));
-                users[msg["uid"]]["key"] = await deriveKeyFromBuffer(saltBuf,KeyBuffer);
-                const salt = Array.prototype.slice.call(saltBuf);
-                const key = Array.prototype.slice.call(KeyBuffer);
-                window.ws.send(JSON.stringify({ "type": "sendKey", "saltBuf": salt, "KeyBuffer": key }));
-                break;
-            } case "aesKey": {
-                let saltBuf = await decryptData(encryptKey, msg["saltBuf"]);
-                let KeyBuffer = await decryptData(encryptKey, msg["KeyBuffer"]);
-                saltBuf = new Uint8Array(saltBuf);
-                KeyBuffer = new Uint8Array(KeyBuffer);
-                users[msg["uid"]]["key"] = await deriveKeyFromBuffer(saltBuf,KeyBuffer);
-            } case "changeName": {
-                users[ws.uid]["name"] = msg["name"];
-                nicknames = nicknames.filter(e => e != localStorage.getItem("name"));
-                localStorage.setItem("name", msg["name"]);
-                nicknames.push(msg["name"]);
-                refreshNicks();
-                break;
-            } case "friends": {
-                if (msg["friends"] != [])
-                    nicknames.push(...msg["friends"]);
-                const nickSet = new Set(nicknames);
-                nicknames = [...nickSet];
-                refreshNicks();
-                msg["friends"].forEach((uid) => window.ws.send(JSON.stringify({ "type": "whois", "uid": parseInt(uid) })));
-                break;
-            } case "announcement": {
-                let p = document.createElement("p");
-                let em = document.createElement("em");
-                em.innerText = msg["msg"];
-                p.appendChild(em);
-            } case "reload": {
-                location.reload();
-            } default:
+                    refreshNicks();
+                    break;
+                }
+            case "friends":
+                {
+                    if (msg["friends"] != [])
+                        nicknames.push(...msg["friends"]);
+                    const nickSet = new Set(nicknames);
+                    nicknames = [...nickSet];
+                    refreshNicks();
+                    msg["friends"].forEach((uid) => window.ws.send(JSON.stringify({ "type": "whois", "uid": parseInt(uid) })));
+                    break;
+                }
+            case "announcement":
+                {
+                    let p = document.createElement("p");
+                    let em = document.createElement("em");
+                    em.innerText = msg["msg"];
+                    p.appendChild(em);
+                }
+            case "reload":
+                {
+                    location.reload();
+                }
+            default:
                 console.log("Message from Server:", msg);
                 break;
         }
@@ -150,7 +178,7 @@ const wsConnect = () => {
         window.setTimeout(wsConnect, 500);
     }
     window.ws.onerror = (e) => {
-        console.error("ws error:",e.message);
+        console.error("ws error:", e.message);
         window.ws.close();
     }
 };
